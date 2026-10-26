@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 
+type VerificationMethod = "first_factor_email" | "mfa_email" | "mfa_phone";
+
 export default function SignInScreen() {
   const { signIn, errors, fetchStatus } = useSignIn();
   const router = useRouter();
@@ -18,63 +20,126 @@ export default function SignInScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
+  const [verificationMethod, setVerificationMethod] =
+    useState<VerificationMethod | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const finalizeSignIn = async () => {
+    await signIn.finalize({
+      navigate: ({ session, decorateUrl }) => {
+        if (session?.currentTask) {
+          console.log(session.currentTask);
+          return;
+        }
+        router.replace(decorateUrl("/") as any);
+      },
+    });
+  };
 
   const onSignInPress = async () => {
+    setFormError(null);
     const { error } = await signIn.password({
       emailAddress: email,
       password,
     });
     if (error) {
+      setFormError(error.message);
       return;
     }
 
     if (signIn.status === "complete") {
-      await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) {
-            console.log(session?.currentTask);
-            return;
-          }
-          const url = decorateUrl("/");
-          router.replace(url as any);
-        },
-      });
+      await finalizeSignIn();
+    } else if (signIn.status === "needs_first_factor") {
+      const emailCodeFactor = signIn.supportedFirstFactors.find(
+        (factor) => factor.strategy === "email_code"
+      );
+      if (!emailCodeFactor) {
+        setFormError("Email code verification is not available for this account.");
+        return;
+      }
+
+      const { error: codeError } = await signIn.emailCode.sendCode();
+      if (codeError) {
+        setFormError(codeError.message);
+        return;
+      }
+      setVerificationMethod("first_factor_email");
     } else if (signIn.status === "needs_second_factor") {
-      await signIn.mfa.sendPhoneCode();
+      const secondFactors = signIn.supportedSecondFactors;
+      if (secondFactors.some((factor) => factor.strategy === "email_code")) {
+        const { error: codeError } = await signIn.mfa.sendEmailCode();
+        if (codeError) {
+          setFormError(codeError.message);
+          return;
+        }
+        setVerificationMethod("mfa_email");
+      } else if (secondFactors.some((factor) => factor.strategy === "phone_code")) {
+        const { error: codeError } = await signIn.mfa.sendPhoneCode();
+        if (codeError) {
+          setFormError(codeError.message);
+          return;
+        }
+        setVerificationMethod("mfa_phone");
+      } else {
+        setFormError("No supported verification code method is available.");
+      }
     } else if (signIn.status === "needs_client_trust") {
       const emailCodeFactor = signIn.supportedSecondFactors.find(
         (factor) => factor.strategy === "email_code"
       );
       if (emailCodeFactor) {
-        await signIn.mfa.sendEmailCode();
+        const { error: codeError } = await signIn.mfa.sendEmailCode();
+        if (codeError) {
+          setFormError(codeError.message);
+          return;
+        }
+        setVerificationMethod("mfa_email");
+      } else {
+        setFormError("Email verification is not available for this sign-in.");
       }
     } else {
-      console.error("Sign-in attempt not complete:", signIn);
+      setFormError(`Sign-in could not continue (status: ${signIn.status ?? "unknown"}).`);
     }
   };
 
   const onVerifyPress = async () => {
-    await signIn.mfa.verifyEmailCode({ code });
+    setFormError(null);
+    const result =
+      verificationMethod === "first_factor_email"
+        ? await signIn.emailCode.verifyCode({ code })
+        : verificationMethod === "mfa_phone"
+          ? await signIn.mfa.verifyPhoneCode({ code })
+          : await signIn.mfa.verifyEmailCode({ code });
+
+    if (result.error) {
+      setFormError(result.error.message);
+      return;
+    }
 
     if (signIn.status === "complete") {
-      await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) {
-            console.log(session?.currentTask);
-            return;
-          }
-          const url = decorateUrl("/");
-          router.replace(url as any);
-        },
-      });
+      await finalizeSignIn();
     } else {
-      console.error("Sign-in attempt not complete:", signIn);
+      setFormError(`Verification could not complete (status: ${signIn.status ?? "unknown"}).`);
+    }
+  };
+
+  const onResendCode = async () => {
+    setFormError(null);
+    const result =
+      verificationMethod === "first_factor_email"
+        ? await signIn.emailCode.sendCode()
+        : verificationMethod === "mfa_phone"
+          ? await signIn.mfa.sendPhoneCode()
+          : await signIn.mfa.sendEmailCode();
+
+    if (result.error) {
+      setFormError(result.error.message);
     }
   };
 
   const isLoading = fetchStatus === "fetching";
 
-  if (signIn.status === "needs_client_trust") {
+  if (verificationMethod) {
     return (
       <View className="flex-1 justify-center items-center bg-white px-6">
         <Image
@@ -99,6 +164,7 @@ export default function SignInScreen() {
             {errors.fields.code.message}
           </Text>
         )}
+        {formError && <Text className="text-red-500 mb-4">{formError}</Text>}
 
         <TouchableOpacity
           onPress={onVerifyPress}
@@ -113,13 +179,21 @@ export default function SignInScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => signIn.mfa.sendEmailCode()}
+          onPress={onResendCode}
           className="py-2 mb-2"
         >
           <Text className="text-blue-600">I need a new code</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => signIn.reset()} className="py-2">
+        <TouchableOpacity
+          onPress={() => {
+            signIn.reset();
+            setVerificationMethod(null);
+            setCode("");
+            setFormError(null);
+          }}
+          className="py-2"
+        >
           <Text className="text-blue-600">Start over</Text>
         </TouchableOpacity>
       </View>
@@ -171,6 +245,7 @@ export default function SignInScreen() {
             {errors.fields.password.message}
           </Text>
         )}
+        {formError && <Text className="text-red-500 mb-4">{formError}</Text>}
 
         <TouchableOpacity
           onPress={onSignInPress}

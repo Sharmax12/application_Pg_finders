@@ -21,54 +21,90 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const onSignUpPress = async () => {
-    const { error } = await signUp.password({
-      emailAddress: email,
-      password,
-      firstName,
-      lastName,
-    });
-    if (error) {
-      console.error(JSON.stringify(error, null, 2));
-      return;
-    }
+    setFormError(null);
+    try {
+      const { error } = await signUp.password({
+        emailAddress: email,
+        password,
+        firstName,
+        lastName,
+      });
+      if (error) {
+        setFormError(error.message);
+        return;
+      }
 
-    if (!error) await signUp.verifications.sendEmailCode();
+      const { error: verificationError } =
+        await signUp.verifications.sendEmailCode();
+      if (verificationError) {
+        setFormError(verificationError.message);
+        return;
+      }
+
+      setVerificationSent(true);
+    } catch (error) {
+      console.error("Sign-up failed:", error);
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Sign-up failed unexpectedly. Please try again."
+      );
+    }
   };
 
   const onVerifyPress = async () => {
-    await signUp.verifications.verifyEmailCode({
-      code,
-    });
+    setFormError(null);
+    try {
+      const { error } = await signUp.verifications.verifyEmailCode({ code });
+      if (error) {
+        setFormError(error.message);
+        return;
+      }
 
-    if (signUp.status === "complete") {
-      await signUp.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) {
-            console.log(session?.currentTask);
-            return;
-          }
-          const url = decorateUrl("/");
-          router.replace(url as any);
-        },
-      });
-    } else {
-      console.error("Sign-up attempt not complete:", signUp);
+      if (signUp.status === "complete") {
+        await signUp.finalize({
+          navigate: ({ session, decorateUrl }) => {
+            if (session?.currentTask) {
+              console.log(session.currentTask);
+              return;
+            }
+            router.replace(decorateUrl("/") as any);
+          },
+        });
+      } else {
+        setVerificationSent(false);
+        const missingFields = signUp.missingFields.join(", ");
+        setFormError(
+          missingFields
+            ? `Email verified, but sign-up still requires: ${missingFields}.`
+            : `Email verification did not complete sign-up (status: ${signUp.status ?? "unknown"}).`
+        );
+      }
+    } catch (error) {
+      console.error("Email verification failed:", error);
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Email verification failed unexpectedly. Please try again."
+      );
     }
   };
 
   const isLoading = fetchStatus === "fetching";
 
-  if (signUp.status === "complete" || isSignedIn) {
+  if (isSignedIn) {
     return null;
   }
 
   // OTP verification screen
   if (
-    signUp.status === "missing_requirements" &&
-    signUp.unverifiedFields.includes("email_address") &&
-    signUp.missingFields.length === 0
+    verificationSent ||
+    (signUp.status === "missing_requirements" &&
+      signUp.unverifiedFields.includes("email_address"))
   ) {
     return (
       <View className="flex-1 justify-center items-center bg-white px-6">
@@ -83,6 +119,9 @@ export default function SignUpScreen() {
         <Text className="text-gray-500 mb-8 text-center">
           We sent a code to {email}
         </Text>
+        {formError && (
+          <Text className="text-red-500 mb-4 text-center">{formError}</Text>
+        )}
 
         <TextInput
           className="w-full border border-gray-300 rounded-xl px-4 py-3 mb-4"
@@ -111,7 +150,22 @@ export default function SignUpScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => signUp.verifications.sendEmailCode()}
+          onPress={async () => {
+            setFormError(null);
+            try {
+              const { error } = await signUp.verifications.sendEmailCode();
+              if (error) {
+                setFormError(error.message);
+              }
+            } catch (error) {
+              console.error("Resending verification code failed:", error);
+              setFormError(
+                error instanceof Error
+                  ? error.message
+                  : "Could not resend the verification code. Please try again."
+              );
+            }
+          }}
           className="py-2"
         >
           <Text className="text-blue-600">I need a new code</Text>
@@ -189,6 +243,7 @@ export default function SignUpScreen() {
             {errors.fields.password.message}
           </Text>
         )}
+        {formError && <Text className="text-red-500 mb-4">{formError}</Text>}
 
         <TouchableOpacity
           onPress={onSignUpPress}
