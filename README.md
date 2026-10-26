@@ -1,56 +1,231 @@
-# Welcome to your Expo app 👋
+# PGFinders — Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Find a place to stay with more confidence.**
 
-## Get started
+PGFinders is a mobile-first product designed to make finding and comparing paying-guest (PG) accommodation easier for students and young professionals. The goal is to bring important information—such as rent, location, amenities, food options, and house rules—into one place so people can make better-informed decisions.
 
-1. Install dependencies
+> **Project Status:** Active development. This repository provides the Expo/React Native app foundation and Clerk authentication routing. PG discovery, listing management, filters, and other product capabilities remain planned until their implementation is complete.
 
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
+## 🚀 Product Vision
 
-   ```bash
-   npx expo start
-   ```
+Searching for a PG can involve scattered information, unclear pricing, uncertain amenities, and limited visibility into everyday living conditions.
 
-In the output, you'll find options to open the app in a
+PGFinders aims to make accommodation discovery more structured, transparent, and convenient.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Planned Features
 
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- 🏠 **Discover PGs** — Browse available accommodation listings.
+- 💰 **Transparent Pricing** — Compare rent, deposits, and additional charges.
+- 🔎 **Smart Search & Filters** — Search by location, budget, room type, and preferences.
+- 🍽️ **Food & Amenities** — Review food arrangements, facilities, and house rules.
+- 📍 **Location-Based Discovery** — Explore accommodation options near colleges and workplaces.
+- ❤️ **Saved Listings** — Bookmark places worth revisiting.
+- 🤝 **Direct Enquiries** — Make it easier to connect with PG owners or managers.
+- 🛡️ **Trust & Transparency** — Progressively introduce listing checks and reporting mechanisms.
 
-## Get a fresh project
+These are product goals, not a claim that all features are currently implemented.
 
-When you're ready, run:
+---
 
-```bash
-npm run reset-project
+## 🛠️ Tech Stack
+
+| Technology | Purpose |
+|---|---|
+| React Native | Cross-platform mobile application |
+| Expo SDK | Mobile development and build tooling |
+| Expo Router | File-based navigation |
+| TypeScript | Type-safe application development |
+| Clerk | Authentication |
+| NativeWind | Utility-first styling |
+| Tailwind CSS | Styling utilities |
+| Zustand | Client-side state management |
+| Supabase JS | Database integration foundation |
+
+---
+
+## 📂 Project Structure
+
+```text
+application_Pg_finders/
+├── assets/          # Images, icons, and static assets
+├── components/      # Reusable UI components
+├── hooks/           # Reusable React hooks
+├── lib/             # Shared utilities and integrations
+├── src/
+│   └── app/         # Expo Router screens and layouts
+├── store/           # Zustand state stores
+├── types/           # TypeScript definitions
+├── app.json         # Expo configuration
+├── package.json     # Dependencies and scripts
+└── README.md        # Project documentation
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Some folders and responsibilities may evolve as development progresses.
 
-### Other setup steps
+---
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## ⚙️ Getting Started
 
-## Learn more
+### Prerequisites
 
-To learn more about developing your project with Expo, look at the following resources:
+Make sure you have the following installed:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- Node.js LTS
+- npm
+- Git
+- Expo Go or an Android emulator
+- Xcode and an iOS simulator for iOS development on macOS
+- A Clerk application and its publishable key
 
-## Join the community
+### 1. Clone the repository
 
-Join our community of developers creating universal apps.
+```bash
+git clone https://github.com/Sharmax12/application_Pg_finders.git
+cd application_Pg_finders
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure environment variables
+
+Create a `.env` file in the project root:
+
+```dotenv
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_replace_with_your_key
+```
+
+Replace the placeholder with your Clerk publishable key from the Clerk dashboard.
+
+The application expects this environment variable to be configured before startup.
+
+If Supabase functionality is implemented, configure the project URL and public client key using the variable names expected by your code.
+
+**Security reminder:**
+- Never commit `.env` files containing credentials.
+- Never expose Clerk secret keys in a mobile application.
+- Never include a Supabase service-role key in client-side code.
+- Use appropriate database access policies before connecting user-facing features.
+
+### 4. Start the development server
+
+```bash
+npx expo start
+```
+
+Follow the Expo CLI instructions to run the application on your device, emulator, or simulator.
+
+---
+
+## 📱 Available Commands
+
+| Command | Description |
+|---|---|
+| `npm start` | Start the Expo development server |
+| `npm run android` | Run the Android workflow |
+| `npm run ios` | Run the iOS workflow |
+| `npm run web` | Run the web version |
+| `npm run lint` | Run the configured lint command |
+| `npx tsc --noEmit` | Check TypeScript types |
+| `npx expo-doctor` | Check Expo configuration and dependencies |
+
+Some native modules may require an Expo development build instead of Expo Go.
+
+---
+
+## 🔐 Authentication Flow
+
+The current application entry flow uses Clerk authentication.
+
+1. `src/app/_layout.tsx` wraps the application with `ClerkProvider`.
+2. `src/app/index.tsx` waits for authentication state to load.
+3. Authenticated users are redirected to the main tab area.
+4. Unauthenticated users are redirected to `/sign-in`.
+
+Ensure the Clerk publishable key is configured before launching the application.
+
+---
+
+## 🗺️ Development Roadmap
+
+### Phase 1 — Foundation
+- Stabilise navigation and authentication.
+- Configure application identity and environment variables.
+- Improve loading and error handling.
+
+### Phase 2 — Accommodation Data
+- Define the PG listing data model.
+- Define user, owner, amenity, location, and pricing structures.
+- Establish appropriate database access policies.
+
+### Phase 3 — Core Discovery
+- Build the PG listing feed.
+- Implement search and filters.
+- Create detailed accommodation pages.
+- Add saved listings.
+
+### Phase 4 — Enquiries & Trust
+- Implement enquiry workflows.
+- Introduce listing review and reporting mechanisms.
+- Improve pricing transparency and listing freshness.
+
+### Phase 5 — Testing & Release
+- Test on physical Android and iOS devices.
+- Handle empty, loading, offline, and error states.
+- Configure app icons, splash screens, deep links, and platform identifiers.
+- Prepare production builds.
+
+Prioritise a reliable search-to-enquiry journey before expanding into advanced features.
+
+---
+
+## 🧑‍💻 Development Guidelines
+
+- Use Expo Router for screens and navigation.
+- Keep reusable UI components outside the route tree.
+- Place shared hooks in `hooks/` and integrations in `lib/`.
+- Store shared TypeScript definitions in `types/`.
+- Use Zustand for shared client state where appropriate.
+- Prefer `npx expo install <package>` for Expo-compatible dependencies.
+- Handle loading, empty, and error states.
+- Keep secrets and local environment files out of version control.
+- Test functionality on actual devices throughout development.
+
+---
+
+## 🔒 Security
+
+Security is essential when handling accommodation listings and user enquiries.
+
+- Keep secret API keys on trusted servers.
+- Never ship a Supabase service-role key in the mobile application.
+- Enforce data access permissions at the database or server layer.
+- Collect only the personal information required by the product.
+- Validate listing data and provide ways to report inaccurate information.
+
+---
+
+## 🤝 Contributing
+
+Contributions and suggestions are welcome.
+
+1. Create a focused branch for your change.
+2. Follow the existing project structure.
+3. Keep changes small and understandable.
+4. Run linting and type checks where possible.
+5. Document the changes and include testing notes.
+
+---
+
+## 📄 License
+
+This repository includes an MIT license. See [`LICENSE`](./LICENSE) for the terms.
+
+---
+
+**PGFinders — Making the PG search process clearer, safer, and less stressful.**
