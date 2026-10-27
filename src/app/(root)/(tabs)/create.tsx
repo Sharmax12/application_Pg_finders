@@ -42,6 +42,11 @@ interface FormState {
   title: string;
   description: string;
   price: string;
+  depositAmount: string;
+  foodAvailable: boolean;
+  genderPreference: "any" | "male" | "female";
+  amenitiesText: string;
+  houseRules: string;
   type: PropertyType;
   bedrooms: number;
   bathrooms: number;
@@ -58,6 +63,11 @@ const INITIAL_FORM: FormState = {
   title: "",
   description: "",
   price: "",
+  depositAmount: "",
+  foodAvailable: false,
+  genderPreference: "any",
+  amenitiesText: "",
+  houseRules: "",
   type: "single_room",
   bedrooms: 1,
   bathrooms: 1,
@@ -235,6 +245,19 @@ export default function CreatePropertyScreen() {
     if (form.images.length > 6)
       return Alert.alert("Validation", "A PG listing can have at most 6 photos.");
 
+    const depositNum = form.depositAmount.trim() ? Number(form.depositAmount) : null;
+    if (depositNum !== null &&
+      (!Number.isFinite(depositNum) || depositNum < 0 || depositNum > MAX_PRICE))
+      return Alert.alert("Validation", "Deposit must be between ₹0 and the maximum allowed amount.");
+
+    const amenities = form.amenitiesText
+      .split(",")
+      .map((amenity) => amenity.trim())
+      .filter(Boolean)
+      .slice(0, 20);
+    if (amenities.some((amenity) => amenity.length > 60))
+      return Alert.alert("Validation", "Each amenity must be 60 characters or fewer.");
+
     const areaNum = form.areaSqft.trim() ? Number(form.areaSqft) : null;
     if (areaNum !== null && (!Number.isFinite(areaNum) || areaNum <= 0))
       return Alert.alert("Validation", "Area must be a positive number.");
@@ -255,6 +278,11 @@ export default function CreatePropertyScreen() {
         title: form.title.trim(),
         description: form.description.trim(),
         price: priceNum,
+        deposit_amount: depositNum,
+        food_available: form.foodAvailable,
+        gender_preference: form.genderPreference,
+        amenities,
+        house_rules: form.houseRules.trim(),
         type: form.type,
         bedrooms: form.bedrooms,
         bathrooms: form.bathrooms,
@@ -487,6 +515,88 @@ export default function CreatePropertyScreen() {
               value={form.areaSqft}
               onChangeText={(v) => updateForm({ areaSqft: v })}
               keyboardType="numeric"
+            />
+          </View>
+
+          <View className={sectionClass}>
+            <Text className={labelClass}>Security Deposit (₹, optional)</Text>
+            <TextInput
+              className={inputClass}
+              placeholder="e.g. 12000"
+              placeholderTextColor="#9CA3AF"
+              value={form.depositAmount}
+              onChangeText={(v) => updateForm({ depositAmount: v })}
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View className={sectionClass}>
+            <Text className={labelClass}>Accommodation preference</Text>
+            <View className="flex-row gap-2">
+              {([
+                { label: "Any", value: "any" },
+                { label: "Men", value: "male" },
+                { label: "Women", value: "female" },
+              ] as const).map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  accessibilityRole="button"
+                  onPress={() => updateForm({ genderPreference: option.value })}
+                  className={`flex-1 rounded-xl border px-3 py-3 items-center ${
+                    form.genderPreference === option.value
+                      ? "bg-blue-600 border-blue-600"
+                      : "bg-white border-gray-200"
+                  }`}
+                >
+                  <Text className={`font-semibold ${
+                    form.genderPreference === option.value ? "text-white" : "text-gray-700"
+                  }`}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <TouchableOpacity
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: form.foodAvailable }}
+            onPress={() => updateForm({ foodAvailable: !form.foodAvailable })}
+            className={`flex-row items-center justify-between rounded-2xl border p-4 mb-5 ${
+              form.foodAvailable ? "bg-blue-50 border-blue-200" : "bg-white border-gray-200"
+            }`}
+          >
+            <View>
+              <Text className="text-gray-800 font-semibold">Food included</Text>
+              <Text className="text-xs text-gray-500 mt-1">Is food provided as part of the stay?</Text>
+            </View>
+            <Ionicons
+              name={form.foodAvailable ? "checkbox" : "square-outline"}
+              size={22}
+              color={form.foodAvailable ? "#2563EB" : "#9CA3AF"}
+            />
+          </TouchableOpacity>
+
+          <View className={sectionClass}>
+            <Text className={labelClass}>Amenities (comma-separated)</Text>
+            <TextInput
+              className={inputClass}
+              placeholder="Wi-Fi, laundry, AC, power backup"
+              placeholderTextColor="#9CA3AF"
+              value={form.amenitiesText}
+              onChangeText={(v) => updateForm({ amenitiesText: v })}
+            />
+            <Text className="text-xs text-gray-400 mt-1">Add up to 20 amenities.</Text>
+          </View>
+
+          <View className={sectionClass}>
+            <Text className={labelClass}>House rules (optional)</Text>
+            <TextInput
+              className={`${inputClass} h-24`}
+              placeholder="Curfew, visitors, smoking, quiet hours..."
+              placeholderTextColor="#9CA3AF"
+              value={form.houseRules}
+              onChangeText={(v) => updateForm({ houseRules: v })}
+              multiline
+              textAlignVertical="top"
             />
           </View>
 
