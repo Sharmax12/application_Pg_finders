@@ -1,21 +1,5 @@
-export const PROPERTY_COLUMNS = [
-  "id",
-  "title",
-  "description",
-  "price",
-  "type",
-  "bedrooms",
-  "bathrooms",
-  "area_sqft",
-  "address",
-  "city",
-  "latitude",
-  "longitude",
-  "images",
-  "is_featured",
-  "is_sold",
-  "created_at",
-].join(",");
+export const PROPERTY_COLUMNS =
+  "id,title,description,price,type,bedrooms,bathrooms,area_sqft,address,city,latitude,longitude,images,is_featured,is_sold,created_at";
 
 export interface Property {
   id: string;
