@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "my-app",
-    "slug": "my-app",
+    "name": "PGFinders",
+    "slug": "pgfinders",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/kribb.png",
-    "scheme": "myapp",
+    "scheme": "pgfinders",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
