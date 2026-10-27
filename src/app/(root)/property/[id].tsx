@@ -193,24 +193,27 @@ export default function PropertyDetailScreen() {
   };
 
   const handleContact = () => {
-    const supportWhatsApp = (process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ?? "").replace(
-      /\D/g,
+    const contactNumber = (
+      property?.owner_whatsapp ??
+      process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ??
       ""
-    );
+    ).replace(/\D/g, "");
 
     // Do not route users to a placeholder number. This is a global PGFinders
     // support contact, not a verified per-listing owner number.
-    if (supportWhatsApp.length < 10 || supportWhatsApp.length > 15) {
+    if (contactNumber.length < 10 || contactNumber.length > 15) {
       Alert.alert(
         "Contact not available yet",
-        "The PGFinders contact number has not been configured. Please try again later."
+        "No contact number is configured for this listing or PGFinders support yet."
       );
       return;
     }
 
     const listingTitle = property?.title ?? "a PG listing";
-    const message = `Hi PGFinders team, I'm interested in "${listingTitle}". Could you connect me with the owner or manager?`;
-    const url = `https://wa.me/${supportWhatsApp}?text=${encodeURIComponent(
+    const message = property?.owner_whatsapp
+      ? `Hi, I'm interested in "${listingTitle}". Is it still available? Could you share the rent and visiting details?`
+      : `Hi PGFinders team, I'm interested in "${listingTitle}". Could you connect me with the owner or manager?`;
+    const url = `https://wa.me/${contactNumber}?text=${encodeURIComponent(
       message
     )}`;
     void Linking.openURL(url).catch((error) => {
@@ -536,7 +539,7 @@ export default function PropertyDetailScreen() {
           >
             <Ionicons name="logo-whatsapp" size={20} color="white" />
             <Text className="text-white font-bold text-base">
-              Contact PGFinders
+              {property.owner_whatsapp ? "Contact Owner / Manager" : "Contact PGFinders"}
             </Text>
           </TouchableOpacity>
 
