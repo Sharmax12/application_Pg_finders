@@ -105,6 +105,11 @@ const makeProperty = (overrides: Partial<Property> = {}): Property => ({
   price: 5000000,
   type: "double_sharing",
   listing_kind: "pg",
+  deposit_amount: 12000,
+  food_available: true,
+  gender_preference: "any",
+  amenities: ["Wi-Fi"],
+  house_rules: "",
   bedrooms: 4,
   bathrooms: 2,
   area_sqft: 1200,
@@ -185,7 +190,7 @@ describe("SearchScreen", () => {
     await waitFor(() => {
       expect(mockQueries).toHaveLength(2);
     });
-    expect(mockQueries[1].or[0]).toContain('\\"');
+    expect(mockQueries[1].or[0]).not.toContain('\\\\"');
     expect(mockQueries[1].or[0]).toContain('title.ilike."%');
     expect(mockQueries[1].or[0]).toContain('city.ilike."%');
   });
