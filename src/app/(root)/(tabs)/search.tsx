@@ -121,7 +121,7 @@ export default function SearchScreen() {
           setResponse({
             key: requestKey,
             results: [],
-            error: "Unable to search properties. Please try again.",
+            error: "Unable to search PGs. Please try again.",
           });
         }
       }
@@ -295,7 +295,7 @@ export default function SearchScreen() {
                 <>
                   <Ionicons name="search-outline" size={48} color="#D1D5DB" />
                   <Text className="text-gray-400 mt-4 text-base">
-                    No properties found
+                    No PGs found
                   </Text>
                   <Text className="text-gray-300 text-sm mt-1">
                     Try a different search or adjust filters
