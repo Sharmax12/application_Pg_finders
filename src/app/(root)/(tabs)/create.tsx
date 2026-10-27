@@ -36,6 +36,83 @@ function isValidDateOnly(value: string): boolean {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
+function Counter({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <View className="flex-1">
+      <Text className={labelClass}>{label}</Text>
+      <View className="flex-row items-center bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <TouchableOpacity
+          onPress={() => onChange(Math.max(1, value - 1))}
+          className="w-11 h-11 items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel={`Decrease ${label.toLowerCase()}`}
+        >
+          <Ionicons name="remove" size={18} color="#374151" />
+        </TouchableOpacity>
+        <Text className="flex-1 text-center text-gray-800 font-bold text-base">
+          {value}
+        </Text>
+        <TouchableOpacity
+          onPress={() => onChange(value + 1)}
+          className="w-11 h-11 items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel={`Increase ${label.toLowerCase()}`}
+        >
+          <Ionicons name="add" size={18} color="#374151" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+function Toggle({
+  label,
+  value,
+  onChange,
+  description,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  description?: string;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={() => onChange(!value)}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+      accessibilityLabel={label}
+      className={`flex-row items-center justify-between p-4 rounded-2xl border ${
+        value ? "bg-blue-50 border-blue-200" : "bg-white border-gray-200"
+      }`}
+    >
+      <View className="flex-1 mr-3">
+        <Text className={`font-semibold ${value ? "text-blue-700" : "text-gray-700"}`}>
+          {label}
+        </Text>
+        {description && (
+          <Text className="text-xs text-gray-400 mt-0.5">{description}</Text>
+        )}
+      </View>
+      <View
+        className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
+          value ? "bg-blue-600 border-blue-600" : "border-gray-300"
+        }`}
+      >
+        {value && <Ionicons name="checkmark" size={14} color="white" />}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 interface FormState {
   title: string;
   description: string;
@@ -227,7 +304,7 @@ export default function CreatePropertyScreen() {
         latitude: String(location.coords.latitude),
         longitude: String(location.coords.longitude),
       });
-    } catch (err) {
+    } catch {
       Alert.alert("Error", "Could not detect location. Enter manually.");
     } finally {
       setDetectingLocation(false);
@@ -345,76 +422,6 @@ export default function CreatePropertyScreen() {
     }
   };
 
-  // ─── UI Helpers ────────────────────────────────────────────
-  const Counter = ({
-    label,
-    value,
-    onChange,
-  }: {
-    label: string;
-    value: number;
-    onChange: (v: number) => void;
-  }) => (
-    <View className="flex-1">
-      <Text className={labelClass}>{label}</Text>
-      <View className="flex-row items-center bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <TouchableOpacity
-          onPress={() => onChange(Math.max(1, value - 1))}
-          className="w-11 h-11 items-center justify-center"
-        >
-          <Ionicons name="remove" size={18} color="#374151" />
-        </TouchableOpacity>
-        <Text className="flex-1 text-center text-gray-800 font-bold text-base">
-          {value}
-        </Text>
-        <TouchableOpacity
-          onPress={() => onChange(value + 1)}
-          className="w-11 h-11 items-center justify-center"
-        >
-          <Ionicons name="add" size={18} color="#374151" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const Toggle = ({
-    label,
-    value,
-    onChange,
-    description,
-  }: {
-    label: string;
-    value: boolean;
-    onChange: (v: boolean) => void;
-    description?: string;
-  }) => (
-    <TouchableOpacity
-      onPress={() => onChange(!value)}
-      className={`flex-row items-center justify-between p-4 rounded-2xl border ${
-        value ? "bg-blue-50 border-blue-200" : "bg-white border-gray-200"
-      }`}
-    >
-      <View className="flex-1 mr-3">
-        <Text
-          className={`font-semibold ${
-            value ? "text-blue-700" : "text-gray-700"
-          }`}
-        >
-          {label}
-        </Text>
-        {description && (
-          <Text className="text-xs text-gray-400 mt-0.5">{description}</Text>
-        )}
-      </View>
-      <View
-        className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
-          value ? "bg-blue-600 border-blue-600" : "border-gray-300"
-        }`}
-      >
-        {value && <Ionicons name="checkmark" size={14} color="white" />}
-      </View>
-    </TouchableOpacity>
-  );
 
   if (!isAdminLoaded) {
     return (
