@@ -166,7 +166,7 @@ describe("HomeScreen", () => {
 
     const screen = await renderScreen(<HomeScreen />);
 
-    expect(await screen.findByText("No PGs found")).toBeTruthy();
+    expect(await screen.findByText("No PGs found yet")).toBeTruthy();
   });
 
   it("surfaces home fetch failures and allows retry", async () => {
