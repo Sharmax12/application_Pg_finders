@@ -194,7 +194,7 @@ export default function SignUpScreen() {
         <Text className="text-3xl font-bold text-gray-800 mb-2">
           Create account
         </Text>
-        <Text className="text-gray-500 mb-8">Find your dream home today</Text>
+        <Text className="text-gray-500 mb-8">Find a PG that feels right</Text>
 
         <View className="flex-row gap-3 mb-4">
           <TextInput

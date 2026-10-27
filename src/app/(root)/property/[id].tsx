@@ -3,7 +3,7 @@ import { useSuperbase as useSupabase } from "../../../../hooks/useSuperbase";
 import { formatPrice } from "../../../../lib/utils";
 import { supabase } from "../../../../lib/superbase";
 import { useUserStore } from "../../../../store/userStore";
-import type { Property } from "../../../../types/types";
+import { PROPERTY_COLUMNS, type Property } from "../../../../types/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -26,7 +26,6 @@ import { WebView } from "react-native-webview";
 import ImageViewing from "react-native-image-viewing";
 
 const { width } = Dimensions.get("window");
-const ADMIN_PHONE = "919999999999"; // replace with your WhatsApp number
 
 export default function PropertyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -49,7 +48,7 @@ export default function PropertyDetailScreen() {
       try {
         const { data, error } = await supabase
           .from("properties")
-          .select("*")
+          .select(PROPERTY_COLUMNS)
           .eq("id", id)
           .single();
 
@@ -139,8 +138,24 @@ export default function PropertyDetailScreen() {
   };
 
   const handleContact = () => {
-    const message = `Hi! I'm interested in the property: ${property?.title}`;
-    const url = `https://wa.me/${ADMIN_PHONE}?text=${encodeURIComponent(
+    const supportWhatsApp = (process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ?? "").replace(
+      /\\D/g,
+      ""
+    );
+
+    // Do not route users to a placeholder number. This is a global PGFinders
+    // support contact, not a verified per-listing owner number.
+    if (supportWhatsApp.length < 10 || supportWhatsApp.length > 15) {
+      Alert.alert(
+        "Contact not available yet",
+        "The PGFinders contact number has not been configured. Please try again later."
+      );
+      return;
+    }
+
+    const listingTitle = property?.title ?? "a PG listing";
+    const message = `Hi PGFinders team, I'm interested in "${listingTitle}". Could you connect me with the owner or manager?`;
+    const url = `https://wa.me/${supportWhatsApp}?text=${encodeURIComponent(
       message
     )}`;
     void Linking.openURL(url).catch((error) => {
@@ -392,7 +407,7 @@ export default function PropertyDetailScreen() {
           >
             <Ionicons name="logo-whatsapp" size={20} color="white" />
             <Text className="text-white font-bold text-base">
-              Contact Agent
+              Contact PGFinders
             </Text>
           </TouchableOpacity>
 

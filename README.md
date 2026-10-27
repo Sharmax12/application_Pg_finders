@@ -94,17 +94,17 @@ npm install
 
 ### 3. Configure environment variables
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project root using `.env.example` as a template:
 
 ```dotenv
 EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_replace_with_your_key
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_replace_with_your_key
 ```
 
-Replace the placeholder with your Clerk publishable key from the Clerk dashboard.
+Use the Clerk publishable key and Supabase project URL/publishable key from their dashboards. The app reads listings and synchronises the signed-in user through Supabase, so both configurations are required. Existing local deployments using `EXPO_PUBLIC_SUPABASE_KEY` remain supported temporarily; prefer `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for new setup.
 
-The application expects this environment variable to be configured before startup.
-
-If Supabase functionality is implemented, configure the project URL and public client key using the variable names expected by your code.
+Only publishable/client keys belong in `EXPO_PUBLIC_*` variables. Never put a Clerk secret key or Supabase secret/service-role key in a mobile app.
 
 **Security reminder:**
 - Never commit `.env` files containing credentials.

@@ -1,14 +1,15 @@
-import { useAuth } from '@clerk/expo';
-import { Redirect } from 'expo-router';
-import { Text, View } from 'react-native';
+import { useAuth } from "@clerk/expo";
+import { Redirect } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
 
 export default function HomeScreen() {
+  const { isSignedIn, isLoaded } = useAuth();
 
-  const { isSignedIn , isLoaded } = useAuth();
-  
   if (!isLoaded) {
     return (
-      null
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
     );
   }
 
@@ -18,4 +19,3 @@ export default function HomeScreen() {
 
   return <Redirect href="/sign-in" />;
 }
-

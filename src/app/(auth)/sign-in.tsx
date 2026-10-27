@@ -38,102 +38,145 @@ export default function SignInScreen() {
 
   const onSignInPress = async () => {
     setFormError(null);
-    const { error } = await signIn.password({
-      emailAddress: email,
-      password,
-    });
-    if (error) {
-      setFormError(error.message);
+
+    if (!email.trim() || !password) {
+      setFormError("Enter your email address and password.");
       return;
     }
 
-    if (signIn.status === "complete") {
-      await finalizeSignIn();
-    } else if (signIn.status === "needs_first_factor") {
-      const emailCodeFactor = signIn.supportedFirstFactors.find(
-        (factor) => factor.strategy === "email_code"
-      );
-      if (!emailCodeFactor) {
-        setFormError("Email code verification is not available for this account.");
+    try {
+      const { error } = await signIn.password({
+        emailAddress: email.trim(),
+        password,
+      });
+      if (error) {
+        setFormError(error.message);
         return;
       }
 
-      const { error: codeError } = await signIn.emailCode.sendCode();
-      if (codeError) {
-        setFormError(codeError.message);
-        return;
-      }
-      setVerificationMethod("first_factor_email");
-    } else if (signIn.status === "needs_second_factor") {
-      const secondFactors = signIn.supportedSecondFactors;
-      if (secondFactors.some((factor) => factor.strategy === "email_code")) {
-        const { error: codeError } = await signIn.mfa.sendEmailCode();
+      if (signIn.status === "complete") {
+        await finalizeSignIn();
+      } else if (signIn.status === "needs_first_factor") {
+        const emailCodeFactor = signIn.supportedFirstFactors.find(
+          (factor) => factor.strategy === "email_code"
+        );
+        if (!emailCodeFactor) {
+          setFormError("Email code verification is not available for this account.");
+          return;
+        }
+
+        const { error: codeError } = await signIn.emailCode.sendCode();
         if (codeError) {
           setFormError(codeError.message);
           return;
         }
-        setVerificationMethod("mfa_email");
-      } else if (secondFactors.some((factor) => factor.strategy === "phone_code")) {
-        const { error: codeError } = await signIn.mfa.sendPhoneCode();
-        if (codeError) {
-          setFormError(codeError.message);
-          return;
+        setVerificationMethod("first_factor_email");
+      } else if (signIn.status === "needs_second_factor") {
+        const secondFactors = signIn.supportedSecondFactors;
+        if (secondFactors.some((factor) => factor.strategy === "email_code")) {
+          const { error: codeError } = await signIn.mfa.sendEmailCode();
+          if (codeError) {
+            setFormError(codeError.message);
+            return;
+          }
+          setVerificationMethod("mfa_email");
+        } else if (secondFactors.some((factor) => factor.strategy === "phone_code")) {
+          const { error: codeError } = await signIn.mfa.sendPhoneCode();
+          if (codeError) {
+            setFormError(codeError.message);
+            return;
+          }
+          setVerificationMethod("mfa_phone");
+        } else {
+          setFormError("No supported verification code method is available.");
         }
-        setVerificationMethod("mfa_phone");
+      } else if (signIn.status === "needs_client_trust") {
+        const emailCodeFactor = signIn.supportedSecondFactors.find(
+          (factor) => factor.strategy === "email_code"
+        );
+        if (emailCodeFactor) {
+          const { error: codeError } = await signIn.mfa.sendEmailCode();
+          if (codeError) {
+            setFormError(codeError.message);
+            return;
+          }
+          setVerificationMethod("mfa_email");
+        } else {
+          setFormError("Email verification is not available for this sign-in.");
+        }
       } else {
-        setFormError("No supported verification code method is available.");
+        setFormError(
+          `Sign-in could not continue (status: ${signIn.status ?? "unknown"}).`
+        );
       }
-    } else if (signIn.status === "needs_client_trust") {
-      const emailCodeFactor = signIn.supportedSecondFactors.find(
-        (factor) => factor.strategy === "email_code"
+    } catch (error) {
+      console.error("Sign-in failed:", error);
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Sign-in failed unexpectedly. Please try again."
       );
-      if (emailCodeFactor) {
-        const { error: codeError } = await signIn.mfa.sendEmailCode();
-        if (codeError) {
-          setFormError(codeError.message);
-          return;
-        }
-        setVerificationMethod("mfa_email");
-      } else {
-        setFormError("Email verification is not available for this sign-in.");
-      }
-    } else {
-      setFormError(`Sign-in could not continue (status: ${signIn.status ?? "unknown"}).`);
     }
   };
 
   const onVerifyPress = async () => {
     setFormError(null);
-    const result =
-      verificationMethod === "first_factor_email"
-        ? await signIn.emailCode.verifyCode({ code })
-        : verificationMethod === "mfa_phone"
-          ? await signIn.mfa.verifyPhoneCode({ code })
-          : await signIn.mfa.verifyEmailCode({ code });
 
-    if (result.error) {
-      setFormError(result.error.message);
+    if (!code.trim()) {
+      setFormError("Enter the verification code.");
       return;
     }
 
-    if (signIn.status === "complete") {
-      await finalizeSignIn();
-    } else {
-      setFormError(`Verification could not complete (status: ${signIn.status ?? "unknown"}).`);
+    try {
+      const result =
+        verificationMethod === "first_factor_email"
+          ? await signIn.emailCode.verifyCode({ code: code.trim() })
+          : verificationMethod === "mfa_phone"
+            ? await signIn.mfa.verifyPhoneCode({ code: code.trim() })
+            : await signIn.mfa.verifyEmailCode({ code: code.trim() });
+
+      if (result.error) {
+        setFormError(result.error.message);
+        return;
+      }
+
+      if (signIn.status === "complete") {
+        await finalizeSignIn();
+      } else {
+        setFormError(
+          `Verification could not complete (status: ${signIn.status ?? "unknown"}).`
+        );
+      }
+    } catch (error) {
+      console.error("Sign-in verification failed:", error);
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Verification failed unexpectedly. Please try again."
+      );
     }
   };
 
   const onResendCode = async () => {
     setFormError(null);
-    const result =
-      verificationMethod === "first_factor_email"
-        ? await signIn.emailCode.sendCode()
-        : verificationMethod === "mfa_phone"
-          ? await signIn.mfa.sendPhoneCode()
-          : await signIn.mfa.sendEmailCode();
+    try {
+      const result =
+        verificationMethod === "first_factor_email"
+          ? await signIn.emailCode.sendCode()
+          : verificationMethod === "mfa_phone"
+            ? await signIn.mfa.sendPhoneCode()
+            : await signIn.mfa.sendEmailCode();
 
-    if (result.error) {
-      setFormError(result.error.message);
+      if (result.error) {
+        setFormError(result.error.message);
+      }
+    } catch (error) {
+      console.error("Resending sign-in verification code failed:", error);
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Unable to resend the verification code. Please try again."
+      );
     }
   };
 
