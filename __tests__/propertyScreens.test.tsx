@@ -105,6 +105,7 @@ const makeProperty = (overrides: Partial<Property> = {}): Property => ({
   price: 5000000,
   type: "double_sharing",
   listing_kind: "pg",
+  owner_whatsapp: "919876543210",
   deposit_amount: 12000,
   food_available: true,
   gender_preference: "any",
