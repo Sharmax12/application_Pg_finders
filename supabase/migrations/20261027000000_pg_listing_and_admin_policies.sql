@@ -201,7 +201,7 @@ create policy pgfinders_saved_properties_insert_self
     and exists (
       select 1
       from public.properties
-      where properties.id = property_id
+      where properties.id = saved_properties.property_id
         and properties.listing_kind = 'pg'
         and properties.is_sold is false
     )
@@ -233,7 +233,7 @@ create policy pgfinders_saved_properties_insert_self_restrict
     and exists (
       select 1
       from public.properties
-      where properties.id = property_id
+      where properties.id = saved_properties.property_id
         and properties.listing_kind = 'pg'
         and properties.is_sold is false
     )
