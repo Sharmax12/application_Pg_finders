@@ -136,7 +136,7 @@ export default function FilterModal({
         >
           {/* Room Type */}
           <Text className="text-base font-bold text-gray-800 mb-3">
-            Property Type
+            Room Type
           </Text>
           <View className="flex-row flex-wrap gap-2 mb-6">
             {TYPES.map((item) => (
@@ -184,18 +184,18 @@ export default function FilterModal({
 
           {/* Monthly Rent */}
           <Text className="text-base font-bold text-gray-800 mb-3">
-            Price Range (₹)
+            Monthly Rent (₹)
           </Text>
           <View className="flex-row gap-3 mb-3">
             {[
               {
-                label: "Min Price",
+                label: "Min rent",
                 value: localMin,
                 onChange: setLocalMin,
                 placeholder: "0",
               },
               {
-                label: "Max Price",
+                label: "Max rent",
                 value: localMax,
                 onChange: setLocalMax,
                 placeholder: "Any",
