@@ -46,66 +46,68 @@ export default function SignInScreen() {
 
     try {
       const { error } = await signIn.password({
-      emailAddress: email,
-      password,
+        emailAddress: email.trim(),
+        password,
       });
       if (error) {
-      setFormError(error.message);
-      return;
+        setFormError(error.message);
+        return;
       }
-      
+
       if (signIn.status === "complete") {
-      await finalizeSignIn();
+        await finalizeSignIn();
       } else if (signIn.status === "needs_first_factor") {
-      const emailCodeFactor = signIn.supportedFirstFactors.find(
-      (factor) => factor.strategy === "email_code"
-      );
-      if (!emailCodeFactor) {
-      setFormError("Email code verification is not available for this account.");
-      return;
-      }
-      
-      const { error: codeError } = await signIn.emailCode.sendCode();
-      if (codeError) {
-      setFormError(codeError.message);
-      return;
-      }
-      setVerificationMethod("first_factor_email");
+        const emailCodeFactor = signIn.supportedFirstFactors.find(
+          (factor) => factor.strategy === "email_code"
+        );
+        if (!emailCodeFactor) {
+          setFormError("Email code verification is not available for this account.");
+          return;
+        }
+
+        const { error: codeError } = await signIn.emailCode.sendCode();
+        if (codeError) {
+          setFormError(codeError.message);
+          return;
+        }
+        setVerificationMethod("first_factor_email");
       } else if (signIn.status === "needs_second_factor") {
-      const secondFactors = signIn.supportedSecondFactors;
-      if (secondFactors.some((factor) => factor.strategy === "email_code")) {
-      const { error: codeError } = await signIn.mfa.sendEmailCode();
-      if (codeError) {
-      setFormError(codeError.message);
-      return;
-      }
-      setVerificationMethod("mfa_email");
-      } else if (secondFactors.some((factor) => factor.strategy === "phone_code")) {
-      const { error: codeError } = await signIn.mfa.sendPhoneCode();
-      if (codeError) {
-      setFormError(codeError.message);
-      return;
-      }
-      setVerificationMethod("mfa_phone");
-      } else {
-      setFormError("No supported verification code method is available.");
-      }
+        const secondFactors = signIn.supportedSecondFactors;
+        if (secondFactors.some((factor) => factor.strategy === "email_code")) {
+          const { error: codeError } = await signIn.mfa.sendEmailCode();
+          if (codeError) {
+            setFormError(codeError.message);
+            return;
+          }
+          setVerificationMethod("mfa_email");
+        } else if (secondFactors.some((factor) => factor.strategy === "phone_code")) {
+          const { error: codeError } = await signIn.mfa.sendPhoneCode();
+          if (codeError) {
+            setFormError(codeError.message);
+            return;
+          }
+          setVerificationMethod("mfa_phone");
+        } else {
+          setFormError("No supported verification code method is available.");
+        }
       } else if (signIn.status === "needs_client_trust") {
-      const emailCodeFactor = signIn.supportedSecondFactors.find(
-      (factor) => factor.strategy === "email_code"
-      );
-      if (emailCodeFactor) {
-      const { error: codeError } = await signIn.mfa.sendEmailCode();
-      if (codeError) {
-      setFormError(codeError.message);
-      return;
-      }
-      setVerificationMethod("mfa_email");
+        const emailCodeFactor = signIn.supportedSecondFactors.find(
+          (factor) => factor.strategy === "email_code"
+        );
+        if (emailCodeFactor) {
+          const { error: codeError } = await signIn.mfa.sendEmailCode();
+          if (codeError) {
+            setFormError(codeError.message);
+            return;
+          }
+          setVerificationMethod("mfa_email");
+        } else {
+          setFormError("Email verification is not available for this sign-in.");
+        }
       } else {
-      setFormError("Email verification is not available for this sign-in.");
-      }
-      } else {
-      setFormError(`Sign-in could not continue (status: ${signIn.status ?? "unknown"}).`);
+        setFormError(
+          `Sign-in could not continue (status: ${signIn.status ?? "unknown"}).`
+        );
       }
     } catch (error) {
       console.error("Sign-in failed:", error);
