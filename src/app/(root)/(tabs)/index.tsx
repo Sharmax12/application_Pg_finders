@@ -21,7 +21,7 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const [featured, setFeatured] = useState<Property[]>([]);
-  const [recommended, setRecommended PGs] = useState<Property[]>([]);
+  const [recommended, setRecommended] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -48,6 +48,7 @@ export default function HomeScreen() {
               .select(PROPERTY_COLUMNS)
               .eq("is_featured", false)
               .eq("is_sold", false)
+              .not("monthly_rent", "is", null)
               .order("created_at", { ascending: false }),
           ]);
 
@@ -138,7 +139,7 @@ export default function HomeScreen() {
             {/* Featured Section */}
             <View className="mb-6">
               <Text className="text-gray-900 text-lg font-bold px-5 mb-4">
-                Featured
+                Featured PGs
               </Text>
 
               {loading ? (
