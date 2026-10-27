@@ -69,15 +69,20 @@ export default function SearchScreen() {
 
     const fetchResults = async () => {
       try {
-        let query = supabase.from("properties").select(PROPERTY_COLUMNS);
+        let query = supabase
+          .from("properties")
+          .select(PROPERTY_COLUMNS)
+          .eq("listing_kind", "pg")
+          .eq("is_sold", false);
 
         if (request.search) {
-          const escapedSearch = request.search
-            .replace(/\\/g, "\\\\")
-            .replace(/"/g, '\\"');
-          query = query.or(
-            `title.ilike."%${escapedSearch}%",city.ilike."%${escapedSearch}%"`
-          );
+          // Treat user input as literal search text, not PostgREST filter syntax.
+          const safeSearch = request.search.replace(/[\\\\,()%"]/g, " ").trim();
+          if (safeSearch) {
+            query = query.or(
+              `title.ilike."%${safeSearch}%",city.ilike."%${safeSearch}%"`
+            );
+          }
         }
 
         if (request.type) {
