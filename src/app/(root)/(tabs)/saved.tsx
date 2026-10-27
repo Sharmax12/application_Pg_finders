@@ -26,6 +26,8 @@ export default function Saved() {
     useCallback(() => {
       let isCurrent = true;
 
+      const requestAttempt = retryCount + 1;
+
       const loadSavedProperties = async () => {
         setLoading(true);
         setError(null);
@@ -81,7 +83,7 @@ export default function Saved() {
             );
           }
         } catch (loadError) {
-          console.error("Failed to load saved properties:", loadError);
+          console.error(`Failed to load saved properties (attempt ${requestAttempt}):`, loadError);
           if (isCurrent) {
             setError("Unable to load saved properties. Please try again.");
           }
