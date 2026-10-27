@@ -159,7 +159,7 @@ describe("HomeScreen", () => {
 
     const screen = await renderScreen(<HomeScreen />);
 
-    expect(await screen.findByText("No properties found")).toBeTruthy();
+    expect(await screen.findByText("No PG listings found")).toBeTruthy();
   });
 
   it("surfaces home fetch failures and allows retry", async () => {
@@ -190,7 +190,7 @@ describe("SearchScreen", () => {
     await waitFor(() => {
       expect(mockQueries).toHaveLength(2);
     });
-    expect(mockQueries[1].or[0]).not.toContain('\\\\"');
+    expect(mockQueries[1].or[0]).not.toContain("\\");
     expect(mockQueries[1].or[0]).toContain('title.ilike."%');
     expect(mockQueries[1].or[0]).toContain('city.ilike."%');
   });
@@ -238,7 +238,7 @@ describe("SearchScreen", () => {
     const screen = await renderScreen(<SearchScreen />);
     expect(await screen.findByText("Searching...")).toBeTruthy();
     resolveRequest({ data: [], error: null });
-    expect(await screen.findByText("No properties found")).toBeTruthy();
+    expect(await screen.findByText("No PG listings found")).toBeTruthy();
 
     enqueueResult({ data: null, error: { message: "Request failed" } });
     await completeEvent(
