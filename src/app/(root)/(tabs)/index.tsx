@@ -124,7 +124,7 @@ export default function HomeScreen() {
             >
               <Ionicons name="search-outline" size={18} color="#9CA3AF" />
               <Text className="text-gray-400 text-sm flex-1">
-                Search properties, cities...
+                Search PGs, cities...
               </Text>
               <TouchableOpacity
                 onPress={() =>
@@ -187,7 +187,7 @@ export default function HomeScreen() {
           !loading && !error
             ? () => (
                 <View className="items-center py-10">
-                  <Text className="text-gray-400">No properties found</Text>
+                  <Text className="text-gray-400">No PG listings found</Text>
                 </View>
               )
             : undefined
