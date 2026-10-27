@@ -56,19 +56,19 @@ export default function MapScreen() {
 
         {hasCoordinates && (
           <TouchableOpacity
-            onPress={() => {
-            void Linking.openURL(
-              `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-            ).catch((error) => {
-              console.error("Failed to open Google Maps:", error);
-              Alert.alert("Unable to open Google Maps", "Please try again.");
-            });
+          onPress={() => {
+          void Linking.openURL(
+            `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+          ).catch((error) => {
+            console.error("Failed to open Google Maps:", error);
+            Alert.alert("Unable to open Google Maps", "Please try again.");
+          });
           }}
           className="flex-row items-center gap-1 bg-blue-50 px-3 py-2 rounded-full"
         >
           <Ionicons name="navigate-outline" size={14} color="#2563EB" />
           <Text className="text-blue-600 text-xs font-semibold">
-            Google Maps
+          Google Maps
           </Text>
           </TouchableOpacity>
         )}
