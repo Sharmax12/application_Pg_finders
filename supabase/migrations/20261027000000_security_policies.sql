@@ -172,9 +172,9 @@ CREATE TRIGGER block_client_admin_flag_changes
 -- Listing photos are public content, but uploads/updates/deletes are admin-only.
 -- The restrictive policies also prevent a broad pre-existing storage policy from
 -- granting unauthorised writes to this bucket.
-UPDATE storage.buckets
-SET public = true
-WHERE id = 'property-images';
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('property-images', 'property-images', true)
+ON CONFLICT (id) DO UPDATE SET public = EXCLUDED.public;
 
 DROP POLICY IF EXISTS "PGFinders property images are public" ON storage.objects;
 DROP POLICY IF EXISTS "PGFinders admins upload property images" ON storage.objects;
