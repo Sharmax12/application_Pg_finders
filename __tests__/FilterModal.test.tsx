@@ -41,7 +41,7 @@ it("syncs price inputs when opened and applies or resets filters", async () => {
 });
 
 it("applies price inputs alongside selected type and bedroom filters", async () => {
-  useFilterStore.getState().setType("house");
+  useFilterStore.getState().setType("double_sharing");
   useFilterStore.getState().setBedrooms(4);
   const screen = await renderScreen(
     <FilterModal visible onClose={jest.fn()} />
@@ -56,7 +56,7 @@ it("applies price inputs alongside selected type and bedroom filters", async () 
   await completeEvent(fireEvent.press(screen.getByText("Apply Filters (2)")));
 
   const filters = useFilterStore.getState();
-  expect(filters.type).toBe("house");
+  expect(filters.type).toBe("double_sharing");
   expect(filters.bedrooms).toBe(4);
   expect(filters.minPrice).toBe(2000000);
   expect(filters.maxPrice).toBe(9000000);
