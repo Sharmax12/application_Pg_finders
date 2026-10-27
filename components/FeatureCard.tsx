@@ -36,7 +36,7 @@ export default function FeaturedCard({ property }: { property: Property }) {
       {/* Badge */}
       <View className="absolute top-3 left-3 bg-white/90 px-3 py-1 rounded-full">
         <Text className="text-xs font-semibold text-blue-600 capitalize">
-          {property.type}
+          {property.room_type.replace(/_/g, " ")}
         </Text>
       </View>
 
@@ -68,7 +68,7 @@ export default function FeaturedCard({ property }: { property: Property }) {
 
         <View className="flex-row items-center justify-between">
           <Text className="text-blue-600 font-bold text-base">
-            {formatPrice(property.price)}
+            {typeof property.monthly_rent === "number" ? `${formatPrice(property.monthly_rent)}/mo` : "Rent not set"}
           </Text>
           <View className="flex-row items-center gap-3">
             <View className="flex-row items-center gap-1">
