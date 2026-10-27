@@ -31,5 +31,5 @@ export const LISTING_TYPE_LABELS: Record<string, string> = {
 
 export function formatListingType(type: string): string {
   return LISTING_TYPE_LABELS[type] ??
-    type.replace(/_/g, " ").replace(/\\b\\w/g, (letter) => letter.toUpperCase());
+    type.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
