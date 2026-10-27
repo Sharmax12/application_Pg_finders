@@ -1,5 +1,6 @@
 import { useSavedProperty } from "../../../../hooks/useSavedProperty";
 import { useSuperbase as useSupabase } from "../../../../hooks/useSuperbase";
+import ImageViewer from "../../../../components/ImageViewer";
 import { formatPrice } from "../../../../lib/utils";
 import { supabase } from "../../../../lib/superbase";
 import { useUserStore } from "../../../../store/userStore";
@@ -23,7 +24,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
-import ImageViewing from "react-native-image-viewing";
 
 const { width } = Dimensions.get("window");
 
@@ -442,7 +442,7 @@ export default function PropertyDetailScreen() {
       </ScrollView>
 
       {/* Image Viewer */}
-      <ImageViewing
+      <ImageViewer
         images={property.images.map((uri) => ({ uri }))}
         imageIndex={activeIndex}
         visible={imageViewerVisible}

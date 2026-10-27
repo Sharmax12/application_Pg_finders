@@ -2,48 +2,44 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import Profile from "../src/app/(root)/(tabs)/profile";
 
 const mockUser = {
-  id: "user_123",
   firstName: "Ada",
   lastName: "Lovelace",
   imageUrl: "",
-  primaryEmailAddress: { emailAddress: "ada@example.com" },
   emailAddresses: [{ emailAddress: "ada@example.com" }],
-  createdAt: new Date("2025-01-01T00:00:00.000Z"),
-  update: jest.fn().mockResolvedValue(undefined),
+  setProfileImage: jest.fn().mockResolvedValue(undefined),
 };
 const mockSignOut = jest.fn().mockResolvedValue(undefined);
+const mockReplace = jest.fn();
 
 jest.mock("@clerk/expo", () => ({
   useUser: () => ({ isLoaded: true, user: mockUser }),
   useAuth: () => ({ signOut: mockSignOut }),
 }));
 
+jest.mock("expo-router", () => ({
+  useRouter: () => ({ replace: mockReplace }),
+}));
+
 beforeEach(() => {
-  mockUser.update.mockClear().mockResolvedValue(undefined);
+  mockUser.setProfileImage.mockClear().mockResolvedValue(undefined);
   mockSignOut.mockClear().mockResolvedValue(undefined);
+  mockReplace.mockClear();
 });
 
-it("updates the account name through Clerk", async () => {
+it("renders the signed-in user's profile details", async () => {
   const screen = await render(<Profile />);
 
-  await fireEvent.changeText(screen.getByLabelText("First name"), "Augusta");
-  await fireEvent.changeText(screen.getByLabelText("Last name"), "Byron");
-  await fireEvent.press(screen.getByText("Save changes"));
-
-  await waitFor(() => {
-    expect(mockUser.update).toHaveBeenCalledWith({
-      firstName: "Augusta",
-      lastName: "Byron",
-    });
-  });
+  expect(screen.getByText("Ada Lovelace")).toBeTruthy();
+  expect(screen.getByText("ada@example.com")).toBeTruthy();
 });
 
 it("signs out through Clerk", async () => {
   const screen = await render(<Profile />);
 
-  await fireEvent.press(screen.getByText("Sign out"));
+  fireEvent.press(screen.getByText("Sign Out"));
 
   await waitFor(() => {
     expect(mockSignOut).toHaveBeenCalledTimes(1);
+    expect(mockReplace).toHaveBeenCalledWith("/sign-in");
   });
 });

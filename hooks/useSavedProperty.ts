@@ -2,23 +2,36 @@ import { useAuth } from "@clerk/expo";
 import { useEffect, useState } from "react";
 import { useSuperbase } from "./useSuperbase";
 
+function isJwtVerificationError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "PGRST301"
+  );
+}
+
 export function useSavedProperty(propertyId: string, onUnsave?: () => void) {
   const { userId } = useAuth();
   const authSupabase = useSuperbase();
 
-  const [isSaved, setIsSaved] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
-  const [savedLookupError, setSavedLookupError] = useState<string | null>(null);
+  const [savedLookup, setSavedLookup] = useState<{
+    key: string;
+    isSaved: boolean;
+    error: string | null;
+  } | null>(null);
+  const lookupKey = JSON.stringify([userId, propertyId]);
+  const isSaved =
+    savedLookup?.key === lookupKey ? savedLookup.isSaved : false;
+  const savedLookupError =
+    savedLookup?.key === lookupKey ? savedLookup.error : null;
 
   useEffect(() => {
     let isCurrent = true;
 
     if (!userId || !propertyId) {
-      setIsSaved(false);
-      setSavedLookupError(null);
-      return () => {
-        isCurrent = false;
-      };
+      return undefined;
     }
 
     const checkIfSaved = async () => {
@@ -33,14 +46,31 @@ export function useSavedProperty(propertyId: string, onUnsave?: () => void) {
         if (error) throw error;
 
         if (isCurrent) {
-          setIsSaved(Boolean(data));
-          setSavedLookupError(null);
+          setSavedLookup({
+            key: lookupKey,
+            isSaved: Boolean(data),
+            error: null,
+          });
         }
       } catch (error) {
-        console.error("Failed to check saved property:", error);
+        const jwtVerificationFailed = isJwtVerificationError(error);
+        if (jwtVerificationFailed) {
+          console.error(
+            "Supabase rejected the Clerk session token (PGRST301). Verify that Clerk is configured as a third-party auth provider for this Supabase project.",
+            error
+          );
+        } else {
+          console.error("Failed to check saved property:", error);
+        }
         if (isCurrent) {
-          setIsSaved(false);
-          setSavedLookupError("Unable to load saved status. Please try again.");
+          setSavedLookup((current) => ({
+            key: lookupKey,
+            isSaved:
+              current?.key === lookupKey ? current.isSaved : false,
+            error: jwtVerificationFailed
+              ? "Unable to verify your sign-in with Supabase. Check the Clerk and Supabase integration setup."
+              : "Unable to load saved status. Please try again.",
+          }));
         }
       }
     };
@@ -50,7 +80,7 @@ export function useSavedProperty(propertyId: string, onUnsave?: () => void) {
     return () => {
       isCurrent = false;
     };
-  }, [authSupabase, propertyId, userId]);
+  }, [authSupabase, lookupKey, propertyId, userId]);
 
   const toggleSave = async () => {
     if (!userId) {
@@ -72,7 +102,6 @@ export function useSavedProperty(propertyId: string, onUnsave?: () => void) {
 
         if (error) throw error;
 
-        setIsSaved(false);
         onUnsave?.();
       } else {
         const { error } = await authSupabase
@@ -81,12 +110,15 @@ export function useSavedProperty(propertyId: string, onUnsave?: () => void) {
 
         if (error) throw error;
 
-        setIsSaved(true);
       }
 
-      setSavedLookupError(null);
+      setSavedLookup({ key: lookupKey, isSaved: !isSaved, error: null });
     } catch (error) {
-      setSavedLookupError("Unable to update saved properties. Please try again.");
+      setSavedLookup((current) => ({
+        key: lookupKey,
+        isSaved: current?.key === lookupKey ? current.isSaved : isSaved,
+        error: "Unable to update saved properties. Please try again.",
+      }));
       throw error;
     } finally {
       setSaveLoading(false);

@@ -104,6 +104,26 @@ EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_replace_with_your_key
 
 Use the Clerk publishable key and Supabase project URL/publishable key from their dashboards. The app reads listings and synchronises the signed-in user through Supabase, so both configurations are required. Existing local deployments using `EXPO_PUBLIC_SUPABASE_KEY` remain supported temporarily; prefer `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for new setup.
 
+### Connect Clerk authentication to Supabase
+
+The app sends the current Clerk session token to Supabase for authenticated
+queries. Configure Clerk as a Supabase third-party auth provider before using
+saved properties or other authenticated database operations:
+
+1. In the Clerk Dashboard, open **Configure > Integrations > Supabase** and
+   activate the integration for this Clerk application.
+2. Copy the Clerk domain shown after activation.
+3. In the matching Supabase project, open **Authentication > Sign In /
+   Providers**, add **Clerk**, and enter that Clerk domain.
+4. Confirm `EXPO_PUBLIC_SUPABASE_URL` and the publishable key both belong to
+   that same Supabase project.
+
+If Supabase returns `PGRST301` with “No suitable key was found to decode the
+JWT”, it cannot verify the Clerk session token. Check the third-party provider
+configuration and make sure the app's Supabase URL points to the configured
+project; do not replace the client token with a Supabase secret or service-role
+key.
+
 Only publishable/client keys belong in `EXPO_PUBLIC_*` variables. Never put a Clerk secret key or Supabase secret/service-role key in a mobile app.
 
 **Security reminder:**
