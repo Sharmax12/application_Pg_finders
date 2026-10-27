@@ -58,7 +58,7 @@ export default function ProfileScreen() {
       const uri = result.assets[0].uri;
       const filename = uri.split("/").pop() || "profile.jpg";
       const match = /\.(\w+)$/.exec(filename);
-      const mimeType = match ? `image/${match[1]}` : "image/jpeg";
+      const mimeType = match ? `image/${match[1].toLowerCase() === "jpg" ? "jpeg" : match[1].toLowerCase()}` : "image/jpeg";
       const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
       await user?.setProfileImage({ file: dataUrl });
@@ -108,7 +108,7 @@ export default function ProfileScreen() {
           {user.firstName} {user.lastName}
         </Text>
         <Text className="text-gray-500 mt-1">
-          {user.emailAddresses[0].emailAddress}
+          {user.primaryEmailAddress?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? "No email address"}
         </Text>
       </View>
 
@@ -136,7 +136,7 @@ export default function ProfileScreen() {
           label="Help & Support"
           onPress={() =>
             Linking.openURL(
-              "mailto:aniruddhsharma669@gmail.com?subject=Help%20%26%20Support%20-%20Kribb%20App"
+              "mailto:aniruddhsharma669@gmail.com?subject=Help%20%26%20Support%20-%20PGFinders"
             )
           }
         />
