@@ -6,6 +6,25 @@ ALTER TABLE public.properties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saved_properties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
+-- Additive PG-rental fields. Existing sale-oriented rows are deliberately not
+-- migrated into monthly rent: price is not a reliable rent value.
+ALTER TABLE public.properties
+  ADD COLUMN IF NOT EXISTS monthly_rent numeric(12,2)
+    CHECK (monthly_rent IS NULL OR monthly_rent >= 0),
+  ADD COLUMN IF NOT EXISTS security_deposit numeric(12,2)
+    CHECK (security_deposit IS NULL OR security_deposit >= 0),
+  ADD COLUMN IF NOT EXISTS room_type text NOT NULL DEFAULT 'private_room'
+    CHECK (room_type IN ('single_room', 'shared_room', 'private_room', 'entire_pg')),
+  ADD COLUMN IF NOT EXISTS gender_preference text NOT NULL DEFAULT 'any'
+    CHECK (gender_preference IN ('any', 'male', 'female')),
+  ADD COLUMN IF NOT EXISTS food_included boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS amenities text[] NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS available_from date;
+
+CREATE INDEX IF NOT EXISTS properties_available_pg_rent_idx
+  ON public.properties (monthly_rent)
+  WHERE is_sold IS FALSE AND monthly_rent IS NOT NULL;
+
 -- Remove the current broad/public-role policies shown in the dashboard screenshot.
 DROP POLICY IF EXISTS "Properties are publicly readable" ON public.properties;
 DROP POLICY IF EXISTS "Users can delete own saved properties" ON public.saved_properties;
