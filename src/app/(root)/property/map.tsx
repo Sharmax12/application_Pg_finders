@@ -16,11 +16,20 @@ export default function MapScreen() {
   const lat = parseFloat(latitude);
   const lng = parseFloat(longitude);
 
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${
-    lng - 0.001
-  }%2C${lat - 0.001}%2C${lng + 0.001}%2C${
-    lat + 0.001
-  }&layer=mapnik&marker=${lat}%2C${lng}`;
+  const hasCoordinates =
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180;
+  const mapUrl = hasCoordinates
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${
+        lng - 0.001
+      }%2C${lat - 0.001}%2C${lng + 0.001}%2C${
+        lat + 0.001
+      }&layer=mapnik&marker=${lat}%2C${lng}`
+    : null;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -48,7 +57,7 @@ export default function MapScreen() {
         <TouchableOpacity
           onPress={() => {
             void Linking.openURL(
-              `https://www.google.com/maps?q=${lat},${lng}`
+              `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
             ).catch((error) => {
               console.error("Failed to open Google Maps:", error);
               Alert.alert("Unable to open Google Maps", "Please try again.");
@@ -64,7 +73,16 @@ export default function MapScreen() {
       </View>
 
       {/* Full Screen Map */}
-      <WebView source={{ uri: mapUrl }} style={{ flex: 1 }} />
+      {mapUrl ? (
+        <WebView source={{ uri: mapUrl }} style={{ flex: 1 }} />
+      ) : (
+        <View className="flex-1 items-center justify-center px-8">
+          <Ionicons name="location-outline" size={36} color="#9CA3AF" />
+          <Text className="text-gray-500 text-center mt-3">
+            This PG listing does not have valid map coordinates yet.
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
