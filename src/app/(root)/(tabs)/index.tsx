@@ -1,4 +1,4 @@
-import Featured PGsCard from "../../../../components/FeatureCard";
+import FeaturedCard from "../../../../components/FeatureCard";
 import PropertyCard from "../../../../components/PropertyCard";
 import { supabase } from "../../../../lib/superbase";
 import { PROPERTY_COLUMNS, type Property } from "../../../../types/types";
@@ -102,7 +102,7 @@ export default function HomeScreen() {
                 resizeMode="contain"
               />
               <View className="items-end">
-                <Text className="text-gray-500 text-xs">Good morning 👋</Text>
+                <Text className="text-gray-500 text-xs">Find your next PG 👋</Text>
                 <Text className="text-gray-900 text-base font-bold">
                   {user?.firstName ?? "User"}
                 </Text>
