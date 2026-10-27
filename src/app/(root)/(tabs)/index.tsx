@@ -174,7 +174,7 @@ export default function HomeScreen() {
 
             {/* Recommended Header */}
             <Text className="text-gray-900 text-lg font-bold px-5 mb-4">
-              Recommended
+              Recommended PGs
             </Text>
           </View>
         }
