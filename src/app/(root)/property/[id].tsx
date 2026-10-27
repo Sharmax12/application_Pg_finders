@@ -66,6 +66,17 @@ export default function PropertyDetailScreen() {
                     typeof image === "string" && image.length > 0
                 )
               : [],
+            amenities: Array.isArray(data.amenities)
+              ? data.amenities.filter(
+                  (amenity: unknown): amenity is string =>
+                    typeof amenity === "string" && amenity.length > 0
+                )
+              : [],
+            house_rules: typeof data.house_rules === "string" ? data.house_rules : "",
+            gender_preference:
+              data.gender_preference === "male" || data.gender_preference === "female"
+                ? data.gender_preference
+                : "any",
           });
         }
       } catch (fetchError) {
@@ -392,6 +403,59 @@ export default function PropertyDetailScreen() {
               value={property.area_sqft !== null ? `${property.area_sqft} ft²` : "Not listed"}
             />
             <SpecItem icon="home-outline" label="Type" value={formatListingType(property.type)} />
+          </View>
+
+          <View className="rounded-2xl bg-gray-50 border border-gray-100 p-4 mb-6">
+            <View className="flex-row flex-wrap gap-y-4">
+              <View className="w-1/2 pr-3">
+                <Text className="text-xs text-gray-500 mb-1">Security deposit</Text>
+                <Text className="text-gray-900 font-bold">
+                  {property.deposit_amount !== null
+                    ? formatPrice(property.deposit_amount)
+                    : "Not listed"}
+                </Text>
+              </View>
+              <View className="w-1/2">
+                <Text className="text-xs text-gray-500 mb-1">Food</Text>
+                <Text className="text-gray-900 font-bold">
+                  {property.food_available === null
+                    ? "Not specified"
+                    : property.food_available
+                    ? "Included"
+                    : "Not included"}
+                </Text>
+              </View>
+              <View className="w-1/2 pr-3">
+                <Text className="text-xs text-gray-500 mb-1">Accommodation preference</Text>
+                <Text className="text-gray-900 font-bold">
+                  {property.gender_preference === "any"
+                    ? "Any"
+                    : property.gender_preference === "male"
+                    ? "Men"
+                    : "Women"}
+                </Text>
+              </View>
+            </View>
+
+            {property.amenities.length > 0 && (
+              <View className="mt-4">
+                <Text className="text-sm font-bold text-gray-900 mb-2">Amenities</Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {property.amenities.map((amenity) => (
+                    <View key={amenity} className="rounded-full bg-white border border-gray-200 px-3 py-1.5">
+                      <Text className="text-xs text-gray-700">{amenity}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {property.house_rules.trim().length > 0 && (
+              <View className="mt-4">
+                <Text className="text-sm font-bold text-gray-900 mb-1">House rules</Text>
+                <Text className="text-sm text-gray-600 leading-5">{property.house_rules}</Text>
+              </View>
+            )}
           </View>
 
           {/* Description */}
