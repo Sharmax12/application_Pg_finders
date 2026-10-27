@@ -72,10 +72,13 @@ Before running the updated app against Supabase, apply
 `supabase/migrations/20261027000000_pg_listing_and_admin_policies.sql`
 to the same project configured in the app. Review the migration first and use your
 normal migration workflow (for example, link the correct Supabase project and run
-`supabase db push`). The migration separates legacy sale-property rows from PG
-listings, adds monthly-rent/deposit/food/amenity/house-rule fields, and enforces
-admin-only property writes. It also limits each Clerk user's app-user row to self
-read and insert, blocking client-side changes to `is_admin`.
+`supabase db push`). Configure Clerk as Supabase's **native third-party auth
+provider** so Clerk session tokens are accepted by the Data API and include the
+`authenticated` role. The migration separates legacy sale-property rows from PG
+listings, adds monthly-rent/deposit/food/amenity/house-rule/owner-contact fields,
+and enforces admin-only property writes. It also limits each Clerk user's app-user
+row to self read and insert, and each saved listing to its owner, blocking
+client-side changes to `is_admin` or another user's saved list.
 
 Create the first admin only after that account has signed in and its row exists in
 `public.users`. Use a trusted Supabase SQL Editor session, replacing the Clerk user
@@ -86,6 +89,8 @@ update public.users
 set is_admin = true
 where clerk_id = 'user_replace_with_verified_clerk_id';
 ```
+
+Sign out and sign back in after assigning admin status so the app re-fetches the role.
 
 Never expose the Supabase service-role/secret key in the app. Verify the policies
 against the live Supabase project and test non-admin writes before production; this
