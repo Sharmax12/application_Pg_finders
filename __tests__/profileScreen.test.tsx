@@ -24,7 +24,7 @@ beforeEach(() => {
 });
 
 it("updates the account name through Clerk", async () => {
-  const screen = render(<Profile />);
+  const screen = await render(<Profile />);
 
   fireEvent.changeText(screen.getByLabelText("First name"), "Augusta");
   fireEvent.changeText(screen.getByLabelText("Last name"), "Byron");
@@ -39,7 +39,7 @@ it("updates the account name through Clerk", async () => {
 });
 
 it("signs out through Clerk", async () => {
-  const screen = render(<Profile />);
+  const screen = await render(<Profile />);
 
   fireEvent.press(screen.getByText("Sign out"));
 
