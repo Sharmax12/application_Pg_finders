@@ -1,9 +1,15 @@
 import { useSavedProperty } from "../hooks/useSavedProperty";
 import { formatPrice } from "../lib/utils";
-import { Property } from "../types/types";
+import type { Property } from "../types/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  Image,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function PropertyCard({
   property,
@@ -20,9 +26,18 @@ export default function PropertyCard({
     onUnsave
   );
 
+  const handleToggleSave = () => {
+    void toggleSave().catch((error) => {
+      console.error("Failed to update saved property:", error);
+      Alert.alert(
+        "Unable to update saved properties",
+        error instanceof Error ? error.message : "Please try again."
+      );
+    });
+  };
+
   return (
-    <TouchableOpacity
-      onPress={() => router.push(`/(root)/property/${property.id}`)}
+    <View
       className="flex-row bg-white rounded-2xl mb-4 overflow-hidden"
       style={{
         shadowColor: "#000",
@@ -33,70 +48,83 @@ export default function PropertyCard({
         opacity: property.is_sold ? 0.5 : 1,
       }}
     >
-      {/* Image */}
-      <Image
-        source={{ uri: property.images[0] }}
-        className="w-28 h-28"
-        resizeMode="cover"
-      />
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={`View ${property.title}`}
+        onPress={() => router.push(`/(root)/property/${property.id}`)}
+        className="flex-1 flex-row"
+        activeOpacity={0.85}
+      >
+        {property.images?.[0] ? (
+          <Image
+            source={{ uri: property.images[0] }}
+            className="w-28 h-28"
+            resizeMode="cover"
+          />
+        ) : (
+          <View className="w-28 h-28 bg-gray-100 items-center justify-center">
+            <Ionicons name="image-outline" size={24} color="#9CA3AF" />
+          </View>
+        )}
 
-      {/* Info */}
-      <View className="flex-1 p-3 justify-between">
-        <View>
-          <Text
-            className="text-sm font-bold text-gray-800 mb-1"
-            numberOfLines={1}
-          >
-            {property.title}
-          </Text>
-          <View className="flex-row items-center gap-1">
-            <Ionicons name="location-outline" size={11} color="#6B7280" />
-            <Text className="text-xs text-gray-500" numberOfLines={1}>
-              {property.city}
+        <View className="flex-1 p-3 justify-between">
+          <View>
+            <Text
+              className="text-sm font-bold text-gray-800 mb-1"
+              numberOfLines={1}
+            >
+              {property.title}
             </Text>
-          </View>
-        </View>
-
-        <View className="flex-row items-center justify-between">
-          <Text className="text-blue-600 font-bold text-sm">
-            {formatPrice(property.price)}
-          </Text>
-          {property.is_sold && (
-            <View className="bg-red-50 px-2 py-0.5 rounded-full">
-              <Text className="text-red-500 text-xs font-semibold">Sold</Text>
-            </View>
-          )}
-          <View className="flex-row gap-3">
             <View className="flex-row items-center gap-1">
-              <Ionicons name="bed-outline" size={11} color="#6B7280" />
-              <Text className="text-xs text-gray-500">
-                {property.bedrooms} bd
-              </Text>
-            </View>
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="expand-outline" size={11} color="#6B7280" />
-              <Text className="text-xs text-gray-500">
-                {property.area_sqft} ft²
+              <Ionicons name="location-outline" size={11} color="#6B7280" />
+              <Text className="text-xs text-gray-500" numberOfLines={1}>
+                {property.city}
               </Text>
             </View>
           </View>
-        </View>
-      </View>
 
-      {/* Save Button */}
+          <View className="flex-row items-center justify-between">
+            <Text className="text-blue-600 font-bold text-sm">
+              {formatPrice(property.price)}
+            </Text>
+            {property.is_sold && (
+              <View className="bg-red-50 px-2 py-0.5 rounded-full">
+                <Text className="text-red-500 text-xs font-semibold">Sold</Text>
+              </View>
+            )}
+            <View className="flex-row gap-3">
+              <View className="flex-row items-center gap-1">
+                <Ionicons name="bed-outline" size={11} color="#6B7280" />
+                <Text className="text-xs text-gray-500">
+                  {property.bedrooms} bd
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-1">
+                <Ionicons name="expand-outline" size={11} color="#6B7280" />
+                <Text className="text-xs text-gray-500">
+                  {property.area_sqft} ft²
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+
       {showSave && (
         <TouchableOpacity
-          onPress={toggleSave}
+          accessibilityRole="button"
+          accessibilityLabel={isSaved ? "Remove saved property" : "Save property"}
+          onPress={handleToggleSave}
           disabled={saveLoading}
-          className="w-10 items-center pt-3"
+          className="w-12 items-center justify-center"
         >
           <Ionicons
             name={isSaved ? "heart" : "heart-outline"}
-            size={18}
+            size={20}
             color={isSaved ? "#EF4444" : "#9CA3AF"}
           />
         </TouchableOpacity>
       )}
-    </TouchableOpacity>
+    </View>
   );
 }
