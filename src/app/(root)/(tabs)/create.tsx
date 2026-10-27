@@ -4,6 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { useUserStore } from "../../../../store/userStore";
 import {
   ActivityIndicator,
   Alert,
@@ -66,6 +67,8 @@ const INITIAL_FORM: FormState = {
 export default function CreatePropertyScreen() {
   const router = useRouter();
   const authSupabase = useSuperbase();
+  const isAdmin = useUserStore((state) => state.isAdmin);
+  const isAdminLoaded = useUserStore((state) => state.isAdminLoaded);
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
 
@@ -79,6 +82,12 @@ export default function CreatePropertyScreen() {
 
   // ─── Image Picker ──────────────────────────────────────────
   const handlePickImages = async () => {
+    const remainingSlots = Math.max(0, 6 - form.images.length);
+    if (remainingSlots === 0) {
+      Alert.alert("Photo limit reached", "Choose up to six photos per listing.");
+      return;
+    }
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(
@@ -93,7 +102,7 @@ export default function CreatePropertyScreen() {
       allowsMultipleSelection: true,
       quality: 0.7,
       base64: true,
-      selectionLimit: 6,
+      selectionLimit: remainingSlots,
     });
 
     if (result.canceled) return;
@@ -103,19 +112,25 @@ export default function CreatePropertyScreen() {
     const uploadedUrls: string[] = [];
     const previewUris: string[] = [];
 
-    for (const asset of result.assets) {
+    for (const asset of result.assets.slice(0, remainingSlots)) {
       try {
+        const mimeType = asset.mimeType?.startsWith("image/")
+          ? asset.mimeType
+          : "image/jpeg";
+        const extension = (mimeType.split("/")[1] ?? "jpeg")
+          .replace("jpeg", "jpg")
+          .replace(/[^a-z0-9]/gi, "") || "jpg";
         const filename = `property_${Date.now()}_${Math.random()
           .toString(36)
-          .slice(2)}.jpg`;
+          .slice(2)}.${extension}`;
 
-        const base64 = asset.base64!;
-        const buffer = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+        if (!asset.base64) throw new Error("Image data was not available");
+        const buffer = Uint8Array.from(atob(asset.base64), (c) => c.charCodeAt(0));
 
         const { error } = await authSupabase.storage
           .from("property-images")
           .upload(filename, buffer, {
-            contentType: "image/jpeg",
+            contentType: mimeType,
             upsert: false,
           });
 
@@ -141,10 +156,22 @@ export default function CreatePropertyScreen() {
   };
 
   const handleRemoveImage = (index: number) => {
+    const imageUrl = form.images[index];
+    const publicUrlMarker = "/storage/v1/object/public/property-images/";
+    const objectPath = imageUrl?.includes(publicUrlMarker)
+      ? decodeURIComponent(imageUrl.split(publicUrlMarker)[1]?.split("?")[0] ?? "")
+      : "";
+
     updateForm({
       images: form.images.filter((_, i) => i !== index),
       localImages: form.localImages.filter((_, i) => i !== index),
     });
+
+    if (objectPath) {
+      void authSupabase.storage.from("property-images").remove([objectPath]).then(({ error }) => {
+        if (error) console.warn("Could not remove unused property image:", error.message);
+      }).catch((error) => console.warn("Could not remove unused property image:", error));
+    }
   };
 
   // ─── Location Detection ────────────────────────────────────
@@ -177,14 +204,18 @@ export default function CreatePropertyScreen() {
 
   // ─── Submit ────────────────────────────────────────────────
   const handleSubmit = async () => {
+    if (!isAdminLoaded || !isAdmin) {
+      Alert.alert("Not authorized", "Only authorized listing administrators can create listings.");
+      return;
+    }
+
     if (!form.title.trim())
       return Alert.alert("Validation", "Title is required.");
-
     if (!form.price.trim())
       return Alert.alert("Validation", "Price is required.");
 
     const priceNum = Number(form.price);
-    if (isNaN(priceNum) || priceNum < MIN_PRICE)
+    if (!Number.isFinite(priceNum) || priceNum < MIN_PRICE)
       return Alert.alert("Validation", "Price must be greater than ₹0.");
     if (priceNum > MAX_PRICE)
       return Alert.alert(
@@ -198,38 +229,64 @@ export default function CreatePropertyScreen() {
       return Alert.alert("Validation", "City is required.");
     if (form.images.length === 0)
       return Alert.alert("Validation", "Please upload at least one image.");
+    if (form.images.length > 6)
+      return Alert.alert("Validation", "A listing can have no more than six photos.");
 
-    setSubmitting(true);
+    const areaNum = form.areaSqft.trim() ? Number(form.areaSqft) : null;
+    if (areaNum !== null && (!Number.isFinite(areaNum) || areaNum <= 0))
+      return Alert.alert("Validation", "Area must be a positive number.");
 
-    const { error } = await authSupabase.from("properties").insert({
-      title: form.title.trim(),
-      description: form.description.trim(),
-      price: priceNum,
-      type: form.type,
-      bedrooms: form.bedrooms,
-      bathrooms: form.bathrooms,
-      area_sqft: form.areaSqft ? Number(form.areaSqft) : null,
-      address: form.address.trim(),
-      city: form.city.trim(),
-      latitude: form.latitude ? Number(form.latitude) : null,
-      longitude: form.longitude ? Number(form.longitude) : null,
-      images: form.images,
-      is_featured: form.isFeatured,
-      is_sold: false,
-    });
+    const hasLatitude = form.latitude.trim() !== "";
+    const hasLongitude = form.longitude.trim() !== "";
+    if (hasLatitude !== hasLongitude)
+      return Alert.alert("Validation", "Enter both latitude and longitude, or leave both empty.");
 
-    setSubmitting(false);
-
-    if (error) {
-      Alert.alert("Error", "Failed to create property. Please try again.");
-      console.error(error);
-      return;
+    const latitudeNum = hasLatitude ? Number(form.latitude) : null;
+    const longitudeNum = hasLongitude ? Number(form.longitude) : null;
+    if (
+      (latitudeNum !== null &&
+        (!Number.isFinite(latitudeNum) || latitudeNum < -90 || latitudeNum > 90)) ||
+      (longitudeNum !== null &&
+        (!Number.isFinite(longitudeNum) || longitudeNum < -180 || longitudeNum > 180))
+    ) {
+      return Alert.alert("Validation", "Enter valid map coordinates.");
     }
 
-    setForm(INITIAL_FORM);
-    Alert.alert("Success! 🎉", "Property listed successfully.", [
-      { text: "OK", onPress: () => router.replace("/(root)/(tabs)") },
-    ]);
+    setSubmitting(true);
+    try {
+      const { error } = await authSupabase.from("properties").insert({
+        title: form.title.trim(),
+        description: form.description.trim(),
+        price: priceNum,
+        type: form.type,
+        bedrooms: form.bedrooms,
+        bathrooms: form.bathrooms,
+        area_sqft: areaNum,
+        address: form.address.trim(),
+        city: form.city.trim(),
+        latitude: latitudeNum,
+        longitude: longitudeNum,
+        images: form.images,
+        // These fields are protected by the admin-only RLS policies as well.
+        is_featured: form.isFeatured,
+        is_sold: false,
+      });
+
+      if (error) throw error;
+
+      setForm(INITIAL_FORM);
+      Alert.alert("Success! 🎉", "Property listed successfully.", [
+        { text: "OK", onPress: () => router.replace("/(root)/(tabs)") },
+      ]);
+    } catch (error) {
+      console.error("Failed to create property:", error);
+      Alert.alert(
+        "Unable to create listing",
+        "The listing was not saved. Check your connection and administrator access, then try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ─── UI Helpers ────────────────────────────────────────────
@@ -302,6 +359,32 @@ export default function CreatePropertyScreen() {
       </View>
     </TouchableOpacity>
   );
+
+  if (!isAdminLoaded) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#2563EB" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center px-6">
+        <Ionicons name="shield-checkmark-outline" size={42} color="#6B7280" />
+        <Text className="mt-4 text-lg font-bold text-gray-900">Administrator access required</Text>
+        <Text className="mt-2 text-center text-sm text-gray-500">
+          Listing creation is restricted to authorized PGFinders administrators.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.replace("/(root)/(tabs)")}
+          className="mt-6 rounded-xl bg-blue-600 px-5 py-3"
+        >
+          <Text className="font-semibold text-white">Back to home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -402,10 +485,10 @@ export default function CreatePropertyScreen() {
 
           {/* Price */}
           <View className={sectionClass}>
-            <Text className={labelClass}>Price (₹)</Text>
+            <Text className={labelClass}>Price / monthly rent (₹)</Text>
             <TextInput
               className={inputClass}
-              placeholder="e.g. 5000000"
+              placeholder="e.g. 15000 (monthly rent)"
               placeholderTextColor="#9CA3AF"
               value={form.price}
               onChangeText={(v) => updateForm({ price: v })}
@@ -506,7 +589,7 @@ export default function CreatePropertyScreen() {
                   <Ionicons name="locate-outline" size={13} color="#2563EB" />
                 )}
                 <Text className="text-blue-600 text-xs font-semibold">
-                  {detectingLocation ? "Detecting..." : "Detect Location"}
+                  {detectingLocation ? "Detecting..." : "Use current location"}
                 </Text>
               </TouchableOpacity>
             </View>
