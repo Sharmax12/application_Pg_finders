@@ -89,7 +89,7 @@ export default function PropertyCard({
             </Text>
             {property.is_sold && (
               <View className="bg-red-50 px-2 py-0.5 rounded-full">
-                <Text className="text-red-500 text-xs font-semibold">Sold</Text>
+                <Text className="text-red-500 text-xs font-semibold">Unavailable</Text>
               </View>
             )}
             <View className="flex-row gap-3">
