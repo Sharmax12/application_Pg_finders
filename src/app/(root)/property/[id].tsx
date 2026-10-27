@@ -96,7 +96,7 @@ export default function PropertyDetailScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert("Delete Property", "Are you sure?", [
+    Alert.alert("Remove PG listing", "Are you sure you want to remove this PG listing?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
@@ -126,10 +126,10 @@ export default function PropertyDetailScreen() {
   };
 
   const handleMarkSold = () => {
-    Alert.alert("Mark as Sold", "Are you sure?", [
+    Alert.alert("Mark unavailable", "Are you sure this PG is no longer available?", [
       { text: "Cancel", style: "cancel" },
       {
-        text: "Mark Sold",
+        text: "Mark unavailable",
         onPress: () => {
           void markPropertySold();
         },
@@ -187,7 +187,7 @@ export default function PropertyDetailScreen() {
   if (!property) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-gray-500">Property not found</Text>
+        <Text className="text-gray-500">PG listing not found</Text>
       </View>
     );
   }
@@ -315,7 +315,7 @@ export default function PropertyDetailScreen() {
             )}
             {property.is_sold && (
               <View className="bg-red-50 px-3 py-1 rounded-full">
-                <Text className="text-red-500 text-xs font-semibold">Sold</Text>
+                <Text className="text-red-500 text-xs font-semibold">Unavailable</Text>
               </View>
             )}
           </View>
@@ -370,6 +370,15 @@ export default function PropertyDetailScreen() {
               </Text>
             </View>
           </View>
+
+          {property.available_from && (
+            <View className="flex-row items-center gap-2 mb-5">
+              <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+              <Text className="text-sm text-gray-600">
+                Available from {new Date(`${property.available_from}T00:00:00`).toLocaleDateString()}
+              </Text>
+            </View>
+          )}
 
           {property.amenities?.length > 0 && (
             <View className="mb-5">
