@@ -41,9 +41,9 @@ These code changes still require the latest CI run and device testing before the
 
 The branch's CI audit currently reports four high-severity dependency advisories: 
 - Zod < 4.6.6 (GHSA-mrhx-c7xc-m3w5), pulled in by Expo CLI; the audit resolver recommends a major Expo downgrade instead of a verified SDK 58-compatible fix.
-- node-forge <= 1.4.0 (GHSA-86w9-cpqp-85rv), pulled in by Expo code-signing tooling; the advisory database currently reports no patched upstream release.
+- node-forge was initially locked to 1.4.0 (GHSA-86w9-cpqp-85rv). The npm registry now lists 1.4.2, and this branch updates the lockfile within the existing `^1.4.0` dependency range. CI must confirm the advisory disappears from the resolved dependency graph.
 
-These are dependency-chain findings in Expo's tooling, not proof of an exploitable user-facing endpoint. Do not hide them or apply a blind major-version override. Recheck upstream fixes, evaluate a tested compatible patch/override, or record a time-bounded risk exception before public release. Track the advisory output in the GitHub Actions logs.
+The remaining Zod/Expo CLI finding is a dependency-chain issue in Expo's tooling, not proof of an exploitable user-facing endpoint. Do not hide it or apply a blind major-version override. Recheck for an SDK 58-compatible Expo CLI/Zod update, evaluate a tested compatible patch/override, or record a time-bounded risk exception before public release. Track the advisory output in GitHub Actions logs.
 
 ## Product recommendation
 
