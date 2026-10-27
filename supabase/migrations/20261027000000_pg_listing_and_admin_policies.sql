@@ -13,6 +13,21 @@ alter table public.properties
   add constraint properties_listing_kind_check
   check (listing_kind in ('legacy', 'pg'));
 
+-- The original form constrained type to sale-property categories. Extend it for PGs.
+alter table public.properties
+  drop constraint if exists properties_type_check;
+alter table public.properties
+  drop constraint if exists pgfinders_properties_type_check;
+alter table public.properties
+  add constraint pgfinders_properties_type_check
+  check (
+    type is null
+    or type in (
+      'apartment', 'house', 'villa', 'studio',
+      'single_room', 'double_sharing', 'triple_sharing', 'private_room', 'hostel'
+    )
+  );
+
 -- PG-specific terms, distinct from a one-time property sale price.
 alter table public.properties
   add column if not exists deposit_amount numeric(12, 2);
