@@ -41,6 +41,7 @@ const sectionClass = "mb-5";
 interface FormState {
   title: string;
   description: string;
+  ownerWhatsapp: string;
   price: string;
   depositAmount: string;
   foodAvailable: boolean;
@@ -62,6 +63,7 @@ interface FormState {
 const INITIAL_FORM: FormState = {
   title: "",
   description: "",
+  ownerWhatsapp: "",
   price: "",
   depositAmount: "",
   foodAvailable: false,
@@ -270,6 +272,13 @@ export default function CreatePropertyScreen() {
       return Alert.alert("Validation", "Address is required.");
     if (!form.city.trim())
       return Alert.alert("Validation", "City is required.");
+
+    const ownerWhatsapp = form.ownerWhatsapp.replace(/\D/g, "");
+    if (ownerWhatsapp.length < 10 || ownerWhatsapp.length > 15)
+      return Alert.alert(
+        "Validation",
+        "Enter the owner/manager WhatsApp number with country code (10–15 digits)."
+      );
     if (form.images.length === 0)
       return Alert.alert("Validation", "Please upload at least one image.");
     if (form.images.length > 6)
@@ -305,6 +314,7 @@ export default function CreatePropertyScreen() {
     try {
       const { error } = await authSupabase.from("properties").insert({
         listing_kind: "pg",
+        owner_whatsapp: ownerWhatsapp,
         title: form.title.trim(),
         description: form.description.trim(),
         price: priceNum,
@@ -656,6 +666,22 @@ export default function CreatePropertyScreen() {
               value={form.city}
               onChangeText={(v) => updateForm({ city: v })}
             />
+          </View>
+
+          <View className={sectionClass}>
+            <Text className={labelClass}>Owner / Manager WhatsApp</Text>
+            <TextInput
+              className={inputClass}
+              placeholder="e.g. 919876543210"
+              placeholderTextColor="#9CA3AF"
+              value={form.ownerWhatsapp}
+              onChangeText={(v) => updateForm({ ownerWhatsapp: v })}
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+            />
+            <Text className="text-xs text-gray-400 mt-1">
+              Include the country code; enter 10–15 digits. This number is shown to people viewing the listing.
+            </Text>
           </View>
 
           {/* Coordinates */}
