@@ -50,6 +50,7 @@ export default function PropertyDetailScreen() {
           .from("properties")
           .select(PROPERTY_COLUMNS)
           .eq("id", id)
+          .eq("listing_kind", "pg")
           .single();
 
         if (error) {
