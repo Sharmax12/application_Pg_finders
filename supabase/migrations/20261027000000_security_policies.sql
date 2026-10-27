@@ -33,6 +33,9 @@ DROP POLICY IF EXISTS "Users can read own saved properties" ON public.saved_prop
 DROP POLICY IF EXISTS "Users can insert own row" ON public.users;
 DROP POLICY IF EXISTS "Users can read own row" ON public.users;
 DROP POLICY IF EXISTS "Users can update own row" ON public.users;
+DROP POLICY IF EXISTS "Restrict property inserts to admins" ON public.properties;
+DROP POLICY IF EXISTS "Restrict property updates to admins" ON public.properties;
+DROP POLICY IF EXISTS "Restrict property deletes to admins" ON public.properties;
 
 -- Public listing discovery: read-only for anonymous and signed-in users.
 CREATE POLICY "Properties are publicly readable"
@@ -81,6 +84,58 @@ CREATE POLICY "Only PGFinders admins can delete properties"
   ON public.properties
   FOR DELETE
   TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.users AS admin_user
+      WHERE admin_user.clerk_id = (SELECT auth.jwt()->>'sub')
+        AND admin_user.is_admin IS TRUE
+    )
+  );
+
+-- Explicit restrictive guards ensure an older permissive write policy cannot
+-- accidentally widen property-table writes after this migration is applied.
+CREATE POLICY "Restrict property inserts to admins"
+  ON public.properties
+  AS RESTRICTIVE
+  FOR INSERT
+  TO public
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM public.users AS admin_user
+      WHERE admin_user.clerk_id = (SELECT auth.jwt()->>'sub')
+        AND admin_user.is_admin IS TRUE
+    )
+  );
+
+CREATE POLICY "Restrict property updates to admins"
+  ON public.properties
+  AS RESTRICTIVE
+  FOR UPDATE
+  TO public
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.users AS admin_user
+      WHERE admin_user.clerk_id = (SELECT auth.jwt()->>'sub')
+        AND admin_user.is_admin IS TRUE
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM public.users AS admin_user
+      WHERE admin_user.clerk_id = (SELECT auth.jwt()->>'sub')
+        AND admin_user.is_admin IS TRUE
+    )
+  );
+
+CREATE POLICY "Restrict property deletes to admins"
+  ON public.properties
+  AS RESTRICTIVE
+  FOR DELETE
+  TO public
   USING (
     EXISTS (
       SELECT 1
