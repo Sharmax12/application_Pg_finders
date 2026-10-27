@@ -157,7 +157,7 @@ export default function SearchScreen() {
             <Ionicons name="search-outline" size={18} color="#9CA3AF" />
             <TextInput
               className="flex-1 py-3 text-gray-800"
-              placeholder="Search by title or city..."
+              placeholder="Search PGs, localities, colleges..."
               placeholderTextColor="#9CA3AF"
               value={search}
               onChangeText={setSearch}
