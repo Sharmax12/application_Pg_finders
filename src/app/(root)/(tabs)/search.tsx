@@ -143,7 +143,7 @@ export default function SearchScreen() {
       {/* Header */}
       <View className="px-5 pt-4 pb-3">
         <Text className="text-2xl font-bold text-gray-900 mb-4">
-          Find Property
+          Find a PG
         </Text>
 
         {/* Search Bar + Filter Button */}
@@ -277,7 +277,7 @@ export default function SearchScreen() {
         renderItem={({ item }) => <PropertyCard property={item} />}
         ListHeaderComponent={
           <Text className="text-sm text-gray-400 mb-4">
-            {loading ? "Searching..." : `${results.length} properties found`}
+            {loading ? "Searching..." : `${results.length} PGs found`}
           </Text>
         }
         ListEmptyComponent={
@@ -299,7 +299,7 @@ export default function SearchScreen() {
                 <>
                   <Ionicons name="search-outline" size={48} color="#D1D5DB" />
                   <Text className="text-gray-400 mt-4 text-base">
-                    No properties found
+                    No PG listings found
                   </Text>
                   <Text className="text-gray-300 text-sm mt-1">
                     Try a different search or adjust filters
