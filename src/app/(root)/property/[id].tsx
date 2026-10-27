@@ -282,36 +282,50 @@ export default function PropertyDetailScreen() {
         {/* Image Carousel */}
         <View>
           <View style={{ opacity: property.is_sold ? 0.5 : 1 }}>
-            <FlatList
-              data={property.images}
-              keyExtractor={(_, i) => i.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => {
-                    setImageViewerVisible(true);
-                  }}
-                >
-                  <Image
-                    source={{ uri: item }}
-                    style={{ width, height: 300 }}
-                    resizeMode="cover"
-                  />
-                </TouchableOpacity>
-              )}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={onScroll}
-              scrollEventThrottle={16}
-            />
+            {property.images.length > 0 ? (
+              <FlatList
+                data={property.images}
+                keyExtractor={(_, i) => i.toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="View listing photo full screen"
+                    onPress={() => setImageViewerVisible(true)}
+                  >
+                    <Image
+                      source={{ uri: item }}
+                      style={{ width, height: 300 }}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                )}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+              />
+            ) : (
+              <View
+                style={{ width, height: 300 }}
+                className="bg-gray-100 items-center justify-center"
+              >
+                <Ionicons name="image-outline" size={38} color="#9CA3AF" />
+                <Text className="text-sm text-gray-500 mt-3">
+                  No photos have been added to this PG yet.
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Image count badge */}
-          <View className="absolute bottom-3 right-4 bg-black/50 px-3 py-1 rounded-full">
-            <Text className="text-white text-xs font-medium">
-              {activeIndex + 1}/{property.images.length}
-            </Text>
-          </View>
+          {property.images.length > 0 && (
+            <View className="absolute bottom-3 right-4 bg-black/50 px-3 py-1 rounded-full">
+              <Text className="text-white text-xs font-medium">
+                {activeIndex + 1}/{property.images.length}
+              </Text>
+            </View>
+          )}
 
           {/* Dot indicators */}
           {property.images.length > 1 && (
@@ -571,7 +585,7 @@ export default function PropertyDetailScreen() {
                     color="#D97706"
                   />
                   <Text className="text-amber-600 font-semibold">
-                    Mark Sold
+                    Mark Unavailable
                   </Text>
                 </TouchableOpacity>
               )}
@@ -588,14 +602,16 @@ export default function PropertyDetailScreen() {
       </ScrollView>
 
       {/* Image Viewer */}
-      <ImageViewer
-        images={property.images.map((uri) => ({ uri }))}
-        imageIndex={activeIndex}
-        visible={imageViewerVisible}
-        onRequestClose={() => {
-          setImageViewerVisible(false);
-        }}
-      />
+      {property.images.length > 0 && (
+        <ImageViewer
+          images={property.images.map((uri) => ({ uri }))}
+          imageIndex={activeIndex}
+          visible={imageViewerVisible}
+          onRequestClose={() => {
+            setImageViewerVisible(false);
+          }}
+        />
+      )}
     </View>
   );
 }
