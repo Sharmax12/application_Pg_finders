@@ -146,6 +146,41 @@ export default function PropertyDetailScreen() {
     ]);
   };
 
+  const togglePropertyFeatured = async () => {
+    const nextFeatured = !property?.is_featured;
+    try {
+      const { error } = await authSupabase
+        .from("properties")
+        .update({ is_featured: nextFeatured })
+        .eq("id", id);
+
+      if (error) throw error;
+      setProperty((prev) =>
+        prev ? { ...prev, is_featured: nextFeatured } : prev
+      );
+    } catch (updateError) {
+      console.error("Failed to update featured status:", updateError);
+      Alert.alert("Unable to update featured status", "Please try again.");
+    }
+  };
+
+  const handleToggleFeatured = () => {
+    const nextFeatured = !property?.is_featured;
+    Alert.alert(
+      nextFeatured ? "Feature PG Listing" : "Remove Featured Status",
+      nextFeatured
+        ? "This PG will appear in the featured section."
+        : "This PG will no longer appear in the featured section.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: nextFeatured ? "Feature Listing" : "Unfeature Listing",
+          onPress: () => void togglePropertyFeatured(),
+        },
+      ]
+    );
+  };
+
   const handleContact = () => {
     const supportWhatsApp = (process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ?? "").replace(
       /\D/g,
@@ -443,7 +478,20 @@ export default function PropertyDetailScreen() {
 
           {/* Admin Actions */}
           {isAdmin && (
-            <View className="flex-row gap-3">
+            <View className="flex-row flex-wrap gap-3">
+              <TouchableOpacity
+                onPress={handleToggleFeatured}
+                className="flex-1 flex-row items-center justify-center gap-2 bg-blue-50 py-4 rounded-2xl border border-blue-200"
+              >
+                <Ionicons
+                  name={property.is_featured ? "star" : "star-outline"}
+                  size={18}
+                  color="#2563EB"
+                />
+                <Text className="text-blue-700 font-semibold">
+                  {property.is_featured ? "Unfeature" : "Feature PG"}
+                </Text>
+              </TouchableOpacity>
               {!property.is_sold && (
                 <TouchableOpacity
                   onPress={handleMarkSold}
