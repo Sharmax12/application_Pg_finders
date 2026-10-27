@@ -38,6 +38,39 @@ const inputClass =
 const labelClass = "text-sm font-semibold text-gray-700 mb-1.5";
 const sectionClass = "mb-5";
 
+function Counter({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <View className="flex-1">
+      <Text className={labelClass}>{label}</Text>
+      <View className="flex-row items-center bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <TouchableOpacity
+          onPress={() => onChange(Math.max(1, value - 1))}
+          className="w-11 h-11 items-center justify-center"
+        >
+          <Ionicons name="remove" size={18} color="#374151" />
+        </TouchableOpacity>
+        <Text className="flex-1 text-center text-gray-800 font-bold text-base">
+          {value}
+        </Text>
+        <TouchableOpacity
+          onPress={() => onChange(value + 1)}
+          className="w-11 h-11 items-center justify-center"
+        >
+          <Ionicons name="add" size={18} color="#374151" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 interface FormState {
   title: string;
   description: string;
@@ -91,8 +124,6 @@ export default function CreatePropertyScreen() {
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const uploadedStoragePathsRef = useRef<string[]>([]);
-  const storageClientRef = useRef(authSupabase);
-  storageClientRef.current = authSupabase;
 
   useFocusEffect(
     useCallback(() => {
@@ -100,7 +131,7 @@ export default function CreatePropertyScreen() {
         const paths = [...uploadedStoragePathsRef.current];
         uploadedStoragePathsRef.current = [];
         if (paths.length > 0) {
-          void storageClientRef.current.storage
+          void authSupabase.storage
             .from("property-images")
             .remove(paths)
             .then(({ error }) => {
@@ -111,7 +142,7 @@ export default function CreatePropertyScreen() {
             });
         }
       };
-    }, [])
+    }, [authSupabase])
   );
 
   // Loading states
@@ -240,7 +271,8 @@ export default function CreatePropertyScreen() {
         latitude: String(location.coords.latitude),
         longitude: String(location.coords.longitude),
       });
-    } catch (err) {
+    } catch (error) {
+      console.error("Could not detect device location:", error);
       Alert.alert("Error", "Could not detect location. Enter manually.");
     } finally {
       setDetectingLocation(false);
@@ -351,37 +383,6 @@ export default function CreatePropertyScreen() {
     }
   };
 
-  // ─── UI Helpers ────────────────────────────────────────────
-  const Counter = ({
-    label,
-    value,
-    onChange,
-  }: {
-    label: string;
-    value: number;
-    onChange: (v: number) => void;
-  }) => (
-    <View className="flex-1">
-      <Text className={labelClass}>{label}</Text>
-      <View className="flex-row items-center bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <TouchableOpacity
-          onPress={() => onChange(Math.max(1, value - 1))}
-          className="w-11 h-11 items-center justify-center"
-        >
-          <Ionicons name="remove" size={18} color="#374151" />
-        </TouchableOpacity>
-        <Text className="flex-1 text-center text-gray-800 font-bold text-base">
-          {value}
-        </Text>
-        <TouchableOpacity
-          onPress={() => onChange(value + 1)}
-          className="w-11 h-11 items-center justify-center"
-        >
-          <Ionicons name="add" size={18} color="#374151" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
 
 
 
@@ -644,7 +645,7 @@ export default function CreatePropertyScreen() {
           {/* Location */}
           <Text className="text-xs text-gray-500 mb-3">
             Use device location only when you are physically at the PG. Otherwise, enter the
-            PG's coordinates manually or leave them blank.
+            PG&apos;s coordinates manually or leave them blank.
           </Text>
           <View className={sectionClass}>
             <Text className={labelClass}>Address</Text>
