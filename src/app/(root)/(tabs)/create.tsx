@@ -689,7 +689,7 @@ export default function CreatePropertyScreen() {
               <ActivityIndicator color="white" />
             ) : (
               <Text className="text-white font-bold text-base">
-                List Property
+                Publish PG Listing
               </Text>
             )}
           </TouchableOpacity>
