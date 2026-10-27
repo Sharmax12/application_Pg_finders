@@ -24,10 +24,8 @@ alter table public.properties
     check (listing_kind in ('legacy', 'pg')),
   add constraint pgfinders_properties_type_check
     check (
-      type is null or type in (
-        'apartment', 'house', 'villa', 'studio',
-        'single_room', 'double_sharing', 'triple_sharing', 'private_room', 'hostel'
-      )
+      listing_kind = 'legacy'
+      or type in ('single_room', 'double_sharing', 'triple_sharing', 'private_room', 'hostel')
     ),
   add constraint pgfinders_properties_owner_whatsapp
     check (
