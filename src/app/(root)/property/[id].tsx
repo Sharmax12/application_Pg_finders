@@ -378,7 +378,7 @@ export default function PropertyDetailScreen() {
           <View className="flex-row gap-2 mb-3 flex-wrap">
             <View className="bg-blue-50 px-3 py-1 rounded-full">
               <Text className="text-blue-600 text-xs font-semibold capitalize">
-                {property.type}
+                {formatListingType(property.type)}
               </Text>
             </View>
             {property.is_featured && (
