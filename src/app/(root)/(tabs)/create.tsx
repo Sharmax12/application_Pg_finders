@@ -4,8 +4,8 @@ import { useUserStore } from "../../../../store/userStore";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import { Redirect, useRouter } from "expo-router";
-import { useState } from "react";
+import { Redirect, useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -88,6 +88,29 @@ export default function CreatePropertyScreen() {
   const isAdminLoaded = useUserStore((state) => state.isAdminLoaded);
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  const uploadedStoragePathsRef = useRef<string[]>([]);
+  const storageClientRef = useRef(authSupabase);
+  storageClientRef.current = authSupabase;
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        const paths = [...uploadedStoragePathsRef.current];
+        uploadedStoragePathsRef.current = [];
+        if (paths.length > 0) {
+          void storageClientRef.current.storage
+            .from("property-images")
+            .remove(paths)
+            .then(({ error }) => {
+              if (error) console.warn("Could not clean up abandoned PG photos:", error);
+            })
+            .catch((error) => {
+              console.warn("Could not clean up abandoned PG photos:", error);
+            });
+        }
+      };
+    }, [])
+  );
 
   // Loading states
   const [submitting, setSubmitting] = useState(false);
@@ -154,6 +177,7 @@ export default function CreatePropertyScreen() {
             .from("property-images")
             .getPublicUrl(filename);
           uploadedUrls.push(urlData.publicUrl);
+          uploadedStoragePathsRef.current.push(filename);
           previewUris.push(asset.uri);
         } catch (err) {
           console.error("Upload error:", err);
@@ -178,7 +202,13 @@ export default function CreatePropertyScreen() {
       const { error } = await authSupabase.storage
         .from("property-images")
         .remove([decodeURIComponent(encodedPath)]);
-      if (error) console.warn("Could not remove unused listing photo:", error);
+      if (error) {
+        console.warn("Could not remove unused listing photo:", error);
+      } else {
+        uploadedStoragePathsRef.current = uploadedStoragePathsRef.current.filter(
+          (path) => path !== decodeURIComponent(encodedPath)
+        );
+      }
     }
 
     updateForm({
@@ -298,6 +328,7 @@ export default function CreatePropertyScreen() {
 
       if (error) throw error;
 
+      uploadedStoragePathsRef.current = [];
       setForm(INITIAL_FORM);
       Alert.alert("Published! 🎉", "Your PG listing has been published.", [
         { text: "OK", onPress: () => router.replace("/(root)/(tabs)") },
