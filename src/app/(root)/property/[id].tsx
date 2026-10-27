@@ -196,7 +196,7 @@ export default function PropertyDetailScreen() {
     ? property.images.filter((uri) => typeof uri === "string" && uri.length > 0)
     : [];
   const description = typeof property.description === "string" ? property.description : "";
-  const hasCoordinates =
+  const coordinates =
     typeof property.latitude === "number" &&
     typeof property.longitude === "number" &&
     Number.isFinite(property.latitude) &&
@@ -204,11 +204,14 @@ export default function PropertyDetailScreen() {
     property.latitude >= -90 &&
     property.latitude <= 90 &&
     property.longitude >= -180 &&
-    property.longitude <= 180;
-  const mapUrl = hasCoordinates
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${property.longitude - 0.003
-      }%2C${property.latitude - 0.003}%2C${property.longitude + 0.003}%2C${property.latitude + 0.003
-      }&layer=mapnik&marker=${property.latitude}%2C${property.longitude}`
+    property.longitude <= 180
+      ? { latitude: property.latitude, longitude: property.longitude }
+      : null;
+  const hasCoordinates = coordinates !== null;
+  const mapUrl = coordinates
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${coordinates.longitude - 0.003
+      }%2C${coordinates.latitude - 0.003}%2C${coordinates.longitude + 0.003}%2C${coordinates.latitude + 0.003
+      }&layer=mapnik&marker=${coordinates.latitude}%2C${coordinates.longitude}`
     : null;
 
   const isLongDesc = description.length > 150;
