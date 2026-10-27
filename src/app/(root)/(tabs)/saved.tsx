@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import PropertyCard from "../../../../components/PropertyCard";
 import { useSuperbase } from "../../../../hooks/useSuperbase";
-import type { Property } from "../../../../types/types";
+import { PROPERTY_COLUMNS, type Property } from "../../../../types/types";
 
 export default function Saved() {
   const { userId } = useAuth();
@@ -61,7 +61,7 @@ export default function Saved() {
 
           const { data, error: propertyError } = await authSupabase
             .from("properties")
-            .select("*")
+            .select(PROPERTY_COLUMNS)
             .in("id", propertyIds);
 
           if (propertyError) throw propertyError;
