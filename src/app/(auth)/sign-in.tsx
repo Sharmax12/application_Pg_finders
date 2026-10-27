@@ -121,36 +121,62 @@ export default function SignInScreen() {
 
   const onVerifyPress = async () => {
     setFormError(null);
-    const result =
-      verificationMethod === "first_factor_email"
-        ? await signIn.emailCode.verifyCode({ code })
-        : verificationMethod === "mfa_phone"
-          ? await signIn.mfa.verifyPhoneCode({ code })
-          : await signIn.mfa.verifyEmailCode({ code });
 
-    if (result.error) {
-      setFormError(result.error.message);
+    if (!code.trim()) {
+      setFormError("Enter the verification code.");
       return;
     }
 
-    if (signIn.status === "complete") {
-      await finalizeSignIn();
-    } else {
-      setFormError(`Verification could not complete (status: ${signIn.status ?? "unknown"}).`);
+    try {
+      const result =
+        verificationMethod === "first_factor_email"
+          ? await signIn.emailCode.verifyCode({ code: code.trim() })
+          : verificationMethod === "mfa_phone"
+            ? await signIn.mfa.verifyPhoneCode({ code: code.trim() })
+            : await signIn.mfa.verifyEmailCode({ code: code.trim() });
+
+      if (result.error) {
+        setFormError(result.error.message);
+        return;
+      }
+
+      if (signIn.status === "complete") {
+        await finalizeSignIn();
+      } else {
+        setFormError(
+          `Verification could not complete (status: ${signIn.status ?? "unknown"}).`
+        );
+      }
+    } catch (error) {
+      console.error("Sign-in verification failed:", error);
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Verification failed unexpectedly. Please try again."
+      );
     }
   };
 
   const onResendCode = async () => {
     setFormError(null);
-    const result =
-      verificationMethod === "first_factor_email"
-        ? await signIn.emailCode.sendCode()
-        : verificationMethod === "mfa_phone"
-          ? await signIn.mfa.sendPhoneCode()
-          : await signIn.mfa.sendEmailCode();
+    try {
+      const result =
+        verificationMethod === "first_factor_email"
+          ? await signIn.emailCode.sendCode()
+          : verificationMethod === "mfa_phone"
+            ? await signIn.mfa.sendPhoneCode()
+            : await signIn.mfa.sendEmailCode();
 
-    if (result.error) {
-      setFormError(result.error.message);
+      if (result.error) {
+        setFormError(result.error.message);
+      }
+    } catch (error) {
+      console.error("Resending sign-in verification code failed:", error);
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Unable to resend the verification code. Please try again."
+      );
     }
   };
 
