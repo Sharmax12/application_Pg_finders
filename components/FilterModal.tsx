@@ -12,10 +12,11 @@ import { useFilterStore, PropertyType } from "../store/filterStore";
 
 const TYPES: { label: string; value: PropertyType }[] = [
   { label: "All", value: null },
-  { label: "Apartment", value: "apartment" },
-  { label: "House", value: "house" },
-  { label: "Villa", value: "villa" },
-  { label: "Studio", value: "studio" },
+  { label: "Single Room", value: "single_room" },
+  { label: "Double Sharing", value: "double_sharing" },
+  { label: "Triple Sharing", value: "triple_sharing" },
+  { label: "Private Room", value: "private_room" },
+  { label: "Hostel", value: "hostel" },
 ];
 
 const BEDS = [
@@ -27,10 +28,10 @@ const BEDS = [
 ];
 
 const PRICE_PRESETS = [
-  { label: "Under ₹50L", min: null, max: 5000000 },
-  { label: "₹50L – ₹1Cr", min: 5000000, max: 10000000 },
-  { label: "₹1Cr – ₹2Cr", min: 10000000, max: 20000000 },
-  { label: "Above ₹2Cr", min: 20000000, max: null },
+  { label: "Under ₹10k/mo", min: null, max: 10000 },
+  { label: "₹10k–₹20k/mo", min: 10000, max: 20000 },
+  { label: "₹20k–₹40k/mo", min: 20000, max: 40000 },
+  { label: "Above ₹40k/mo", min: 40000, max: null },
 ];
 
 const chip = (active: boolean) =>
@@ -134,7 +135,7 @@ export default function FilterModal({
           contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* Property Type */}
+          {/* PG Stay Type */}
           <Text className="text-base font-bold text-gray-800 mb-3">
             Property Type
           </Text>
@@ -184,18 +185,18 @@ export default function FilterModal({
 
           {/* Price Range */}
           <Text className="text-base font-bold text-gray-800 mb-3">
-            Price Range (₹)
+            Monthly Rent Range (₹/month)
           </Text>
           <View className="flex-row gap-3 mb-3">
             {[
               {
-                label: "Min Price",
+                label: "Min Monthly Rent",
                 value: localMin,
                 onChange: setLocalMin,
                 placeholder: "0",
               },
               {
-                label: "Max Price",
+                label: "Max Monthly Rent",
                 value: localMax,
                 onChange: setLocalMax,
                 placeholder: "Any",
