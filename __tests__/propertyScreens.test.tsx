@@ -245,12 +245,12 @@ describe("SearchScreen", () => {
     const screen = await renderScreen(<SearchScreen />);
     expect(await screen.findByText("Searching...")).toBeTruthy();
     resolveRequest({ data: [], error: null });
-    expect(await screen.findByText("No properties found")).toBeTruthy();
+    expect(await screen.findByText("No PGs found")).toBeTruthy();
 
     enqueueResult({ data: null, error: { message: "Request failed" } });
     await completeEvent(
       fireEvent.changeText(
-        screen.getByPlaceholderText("Search by title or city..."),
+        screen.getByPlaceholderText("Search PGs, localities, colleges..."),
         "Pune"
       )
     );
@@ -271,7 +271,7 @@ describe("SearchScreen", () => {
     const screen = await renderScreen(<SearchScreen />);
     await completeEvent(
       fireEvent.changeText(
-        screen.getByPlaceholderText("Search by title or city..."),
+        screen.getByPlaceholderText("Search PGs, localities, colleges..."),
         "new"
       )
     );
