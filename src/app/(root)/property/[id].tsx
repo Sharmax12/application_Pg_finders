@@ -3,7 +3,7 @@ import { useSuperbase as useSupabase } from "../../../../hooks/useSuperbase";
 import { formatPrice } from "../../../../lib/utils";
 import { supabase } from "../../../../lib/superbase";
 import { useUserStore } from "../../../../store/userStore";
-import type { Property } from "../../../../types/types";
+import { PROPERTY_COLUMNS, type Property } from "../../../../types/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -49,7 +49,7 @@ export default function PropertyDetailScreen() {
       try {
         const { data, error } = await supabase
           .from("properties")
-          .select("*")
+          .select(PROPERTY_COLUMNS)
           .eq("id", id)
           .single();
 
