@@ -69,8 +69,8 @@ jest.mock("expo-router", () => {
   const React = jest.requireActual("react");
   return {
     useRouter: () => ({ push: jest.fn() }),
-    useFocusEffect: (callback: () => void | (() => void)) =>
-      React.useEffect(callback, [callback]),
+    useFocusEffect: (callback: () => (() => void) | undefined) =>
+      React.useEffect(() => callback(), [callback]),
     useLocalSearchParams: () => ({}),
   };
 });
@@ -164,7 +164,9 @@ describe("HomeScreen", () => {
     ).toBeTruthy();
     fireEvent.press(screen.getByText("Try again"));
 
-    await waitFor(() => expect(mockFrom).toHaveBeenCalledTimes(4));
+    await waitFor(() => {
+      expect(mockFrom).toHaveBeenCalledTimes(4);
+    });
   });
 });
 
@@ -176,7 +178,9 @@ describe("SearchScreen", () => {
     const input = screen.getByPlaceholderText("Search by title or city...");
     fireEvent.changeText(input, 'Cedar", (West)');
 
-    await waitFor(() => expect(mockQueries).toHaveLength(2));
+    await waitFor(() => {
+      expect(mockQueries).toHaveLength(2);
+    });
     expect(mockQueries[1].or[0]).toContain('\\"');
     expect(mockQueries[1].or[0]).toContain('title.ilike."%');
     expect(mockQueries[1].or[0]).toContain('city.ilike."%');
@@ -192,7 +196,9 @@ describe("SearchScreen", () => {
 
     await render(<SearchScreen />);
 
-    await waitFor(() => expect(mockQueries).toHaveLength(1));
+    await waitFor(() => {
+      expect(mockQueries).toHaveLength(1);
+    });
     expect(mockQueries[0].eq).toContainEqual(["type", "house"]);
     expect(mockQueries[0].gte).toContainEqual(["bedrooms", 4]);
     expect(mockQueries[0].gte).toContainEqual(["price", 0]);
@@ -205,7 +211,9 @@ describe("SearchScreen", () => {
 
     await render(<SearchScreen />);
 
-    await waitFor(() => expect(mockQueries).toHaveLength(1));
+    await waitFor(() => {
+      expect(mockQueries).toHaveLength(1);
+    });
     expect(mockQueries[0].eq).toContainEqual(["bedrooms", 2]);
     expect(mockQueries[0].gte).toEqual([]);
   });

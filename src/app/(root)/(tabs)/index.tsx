@@ -60,10 +60,10 @@ export default function HomeScreen() {
             setRecommended(recommendedResult.data ?? []);
           }
         } catch (fetchError) {
-          console.error(
-            `Failed to fetch home properties on retry ${retryCount}:`,
-            fetchError
-          );
+          console.error("Failed to fetch home properties:", {
+            retryCount,
+            error: fetchError,
+          });
           if (isCurrent) {
             setError("Unable to load properties. Please try again.");
           }
@@ -148,7 +148,9 @@ export default function HomeScreen() {
                 <View className="items-center px-5 py-6">
                   <Text className="text-center text-red-600">{error}</Text>
                   <TouchableOpacity
-                    onPress={() => setRetryCount((count) => count + 1)}
+                    onPress={() => {
+                      setRetryCount((count) => count + 1);
+                    }}
                     className="mt-3 rounded-xl bg-blue-600 px-4 py-2"
                   >
                     <Text className="font-semibold text-white">Try again</Text>

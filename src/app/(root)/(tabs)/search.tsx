@@ -163,7 +163,11 @@ export default function SearchScreen() {
               autoCapitalize="none"
             />
             {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch("")}>
+              <TouchableOpacity
+                onPress={() => {
+                  setSearch("");
+                }}
+              >
                 <Ionicons name="close-circle" size={18} color="#9CA3AF" />
               </TouchableOpacity>
             )}
@@ -171,7 +175,9 @@ export default function SearchScreen() {
 
           {/* Filter Button */}
           <TouchableOpacity
-            onPress={() => setShowFilters(true)}
+            onPress={() => {
+              setShowFilters(true);
+            }}
             className={`w-12 h-12 rounded-2xl items-center justify-center ${
               activeFilterCount > 0 ? "bg-blue-600" : "bg-white"
             }`}
@@ -206,7 +212,11 @@ export default function SearchScreen() {
                 <Text className="text-blue-700 text-xs font-semibold capitalize">
                   {type}
                 </Text>
-                <TouchableOpacity onPress={() => setType(null)}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setType(null);
+                  }}
+                >
                   <Ionicons name="close" size={12} color="#1D4ED8" />
                 </TouchableOpacity>
               </View>
@@ -219,7 +229,11 @@ export default function SearchScreen() {
                     ? "4+ beds"
                     : `${bedrooms} bed${bedrooms > 1 ? "s" : ""}`}
                 </Text>
-                <TouchableOpacity onPress={() => setBedrooms(null)}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setBedrooms(null);
+                  }}
+                >
                   <Ionicons name="close" size={12} color="#1D4ED8" />
                 </TouchableOpacity>
               </View>
@@ -268,7 +282,9 @@ export default function SearchScreen() {
                 <>
                   <Text className="text-center text-red-600">{error}</Text>
                   <TouchableOpacity
-                    onPress={() => setRetryCount((count) => count + 1)}
+                    onPress={() => {
+                      setRetryCount((count) => count + 1);
+                    }}
                     className="mt-3 rounded-xl bg-blue-600 px-4 py-2"
                   >
                     <Text className="font-semibold text-white">Try again</Text>
@@ -295,7 +311,9 @@ export default function SearchScreen() {
       {/* Filter Modal */}
       <FilterModal
         visible={showFilters}
-        onClose={() => setShowFilters(false)}
+        onClose={() => {
+          setShowFilters(false);
+        }}
       />
     </SafeAreaView>
   );
