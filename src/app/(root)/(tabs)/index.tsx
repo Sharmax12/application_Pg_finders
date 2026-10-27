@@ -1,3 +1,7 @@
+import FeaturedCard from "../../../../components/FeatureCard";
+import PropertyCard from "../../../../components/PropertyCard";
+import { supabase } from "../../../../lib/superbase";
+import { Property } from "../../../../types/types";
 import { useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -11,10 +15,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import FeaturedCard from "../../../../components/FeatureCard";
-import PropertyCard from "../../../../components/PropertyCard";
-import { supabase } from "../../../../lib/superbase";
-import type { Property } from "../../../../types/types";
 
 export default function HomeScreen() {
   const { user } = useUser();
@@ -136,11 +136,13 @@ export default function HomeScreen() {
           </View>
         )}
         ListEmptyComponent={
-          !loading ? (
-            <View className="items-center py-10">
-              <Text className="text-gray-400">No properties found</Text>
-            </View>
-          ) : undefined
+          !loading
+            ? () => (
+                <View className="items-center py-10">
+                  <Text className="text-gray-400">No properties found</Text>
+                </View>
+              )
+            : undefined
         }
       />
     </SafeAreaView>
