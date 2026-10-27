@@ -70,6 +70,7 @@ export default function SearchScreen() {
     const fetchResults = async () => {
       try {
         let query = supabase.from("properties").select(PROPERTY_COLUMNS);
+        query = query.eq("is_sold", false);
 
         if (request.search) {
           const escapedSearch = request.search
