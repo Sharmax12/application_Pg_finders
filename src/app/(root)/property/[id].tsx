@@ -200,8 +200,8 @@ export default function PropertyDetailScreen() {
       ""
     ).replace(/\D/g, "");
 
-    // Do not route users to a placeholder number. This is a global PGFinders
-    // support contact, not a verified per-listing owner number.
+    // Prefer the contact entered for this listing. The global support number
+    // is only a fallback and is not represented as a verified owner contact.
     if (contactNumber.length < 10 || contactNumber.length > 15) {
       Alert.alert(
         "Contact not available yet",
