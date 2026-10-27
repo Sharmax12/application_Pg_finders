@@ -13,6 +13,30 @@ alter table public.properties
   add constraint properties_listing_kind_check
   check (listing_kind in ('legacy', 'pg'));
 
+-- PG-specific terms, distinct from a one-time property sale price.
+alter table public.properties
+  add column if not exists deposit_amount numeric(12, 2);
+alter table public.properties
+  add column if not exists food_available boolean;
+alter table public.properties
+  add column if not exists gender_preference text not null default 'any';
+alter table public.properties
+  add column if not exists amenities text[] not null default '{}'::text[];
+alter table public.properties
+  add column if not exists house_rules text not null default '';
+
+alter table public.properties
+  drop constraint if exists pgfinders_properties_deposit_nonnegative;
+alter table public.properties
+  add constraint pgfinders_properties_deposit_nonnegative
+  check (deposit_amount is null or deposit_amount >= 0);
+
+alter table public.properties
+  drop constraint if exists pgfinders_properties_gender_preference;
+alter table public.properties
+  add constraint pgfinders_properties_gender_preference
+  check (gender_preference in ('any', 'male', 'female'));
+
 create or replace function public.is_pgfinders_admin()
 returns boolean
 language sql
