@@ -21,11 +21,17 @@ export default function FeaturedCard({ property }: { property: Property }) {
       }}
     >
       {/* Image */}
-      <Image
-        source={{ uri: property.images[0] }}
-        className="w-full h-44"
-        resizeMode="cover"
-      />
+      {property.images?.[0] ? (
+        <Image
+          source={{ uri: property.images[0] }}
+          className="w-full h-44"
+          resizeMode="cover"
+        />
+      ) : (
+        <View className="w-full h-44 bg-gray-100 items-center justify-center">
+          <Text className="text-sm text-gray-400">Photo unavailable</Text>
+        </View>
+      )}
 
       {/* Badge */}
       <View className="absolute top-3 left-3 bg-white/90 px-3 py-1 rounded-full">
