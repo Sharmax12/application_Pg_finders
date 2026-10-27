@@ -139,7 +139,7 @@ export default function SearchScreen() {
       {/* Header */}
       <View className="px-5 pt-4 pb-3">
         <Text className="text-2xl font-bold text-gray-900 mb-4">
-          Find Property
+          Find PGs
         </Text>
 
         {/* Search Bar + Filter Button */}
