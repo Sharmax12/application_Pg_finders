@@ -253,9 +253,9 @@ export default function PropertyDetailScreen() {
           </View>
 
           {/* Dot indicators */}
-          {property.images.length > 1 && (
+          {safeImages.length > 1 && (
             <View className="absolute bottom-3 left-0 right-0 flex-row justify-center gap-1">
-              {property.images.map((_, i) => (
+              {safeImages.map((_, i) => (
                 <View
                   key={i}
                   className={`h-1.5 rounded-full ${
