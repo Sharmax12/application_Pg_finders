@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUserStore } from "../../../../store/userStore";
 import {
   ActivityIndicator,
@@ -19,7 +19,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const TYPES = ["apartment", "house", "villa", "studio"] as const;
+const TYPES = ["single_room", "shared_room", "private_room", "entire_pg"] as const;
 type PropertyType = (typeof TYPES)[number];
 
 const MIN_PRICE = 1;
@@ -34,6 +34,10 @@ interface FormState {
   title: string;
   description: string;
   price: string;
+  securityDeposit: string;
+  genderPreference: "any" | "male" | "female";
+  foodIncluded: boolean;
+  amenities: string;
   type: PropertyType;
   bedrooms: number;
   bathrooms: number;
@@ -51,7 +55,11 @@ const INITIAL_FORM: FormState = {
   title: "",
   description: "",
   price: "",
-  type: "apartment",
+  securityDeposit: "",
+  genderPreference: "any",
+  foodIncluded: false,
+  amenities: "",
+  type: "private_room",
   bedrooms: 1,
   bathrooms: 1,
   areaSqft: "",
@@ -69,6 +77,20 @@ export default function CreatePropertyScreen() {
   const authSupabase = useSuperbase();
   const isAdmin = useUserStore((state) => state.isAdmin);
   const isAdminLoaded = useUserStore((state) => state.isAdminLoaded);
+  const pendingImagePaths = useRef<Record<string, string>>({});
+  const listingSaved = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      if (listingSaved.current) return;
+      const paths = Object.values(pendingImagePaths.current);
+      if (paths.length > 0) {
+        void authSupabase.storage.from("property-images").remove(paths).catch((error) => {
+          console.warn("Could not clean up unused listing photos:", error);
+        });
+      }
+    };
+  }, [authSupabase]);
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
 
@@ -141,6 +163,7 @@ export default function CreatePropertyScreen() {
           .getPublicUrl(filename);
 
         uploadedUrls.push(urlData.publicUrl);
+        pendingImagePaths.current[urlData.publicUrl] = filename;
         previewUris.push(asset.uri);
       } catch (err) {
         console.error("Upload error:", err);
@@ -161,6 +184,7 @@ export default function CreatePropertyScreen() {
     const objectPath = imageUrl?.includes(publicUrlMarker)
       ? decodeURIComponent(imageUrl.split(publicUrlMarker)[1]?.split("?")[0] ?? "")
       : "";
+    if (imageUrl) delete pendingImagePaths.current[imageUrl];
 
     updateForm({
       images: form.images.filter((_, i) => i !== index),
@@ -232,6 +256,15 @@ export default function CreatePropertyScreen() {
     if (form.images.length > 6)
       return Alert.alert("Validation", "A listing can have no more than six photos.");
 
+    const depositNum = form.securityDeposit.trim() ? Number(form.securityDeposit) : 0;
+    if (
+      !Number.isFinite(depositNum) ||
+      depositNum < 0 ||
+      depositNum > MAX_PRICE
+    ) {
+      return Alert.alert("Validation", "Security deposit must be a valid non-negative amount.");
+    }
+
     const areaNum = form.areaSqft.trim() ? Number(form.areaSqft) : null;
     if (areaNum !== null && (!Number.isFinite(areaNum) || areaNum <= 0))
       return Alert.alert("Validation", "Area must be a positive number.");
@@ -257,8 +290,16 @@ export default function CreatePropertyScreen() {
       const { error } = await authSupabase.from("properties").insert({
         title: form.title.trim(),
         description: form.description.trim(),
+        // Keep `price` populated during the transition from the old sale-listing schema.
         price: priceNum,
-        type: form.type,
+        type: "studio",
+        monthly_rent: priceNum,
+        security_deposit: depositNum,
+        room_type: form.type,
+        gender_preference: form.genderPreference,
+        food_included: form.foodIncluded,
+        amenities: form.amenities.split(",").map((value) => value.trim()).filter(Boolean).slice(0, 30),
+        available_from: null,
         bedrooms: form.bedrooms,
         bathrooms: form.bathrooms,
         area_sqft: areaNum,
@@ -274,6 +315,8 @@ export default function CreatePropertyScreen() {
 
       if (error) throw error;
 
+      listingSaved.current = true;
+      pendingImagePaths.current = {};
       setForm(INITIAL_FORM);
       Alert.alert("Success! 🎉", "Property listed successfully.", [
         { text: "OK", onPress: () => router.replace("/(root)/(tabs)") },
@@ -395,7 +438,7 @@ export default function CreatePropertyScreen() {
         {/* Header */}
         <View className="flex-row items-center px-5 pt-4 pb-3">
           <Text className="text-2xl font-bold text-gray-900 flex-1">
-            Add Property
+            Add PG Listing
           </Text>
         </View>
 
@@ -460,10 +503,10 @@ export default function CreatePropertyScreen() {
 
           {/* Basic Info */}
           <View className={sectionClass}>
-            <Text className={labelClass}>Title</Text>
+            <Text className={labelClass}>PG listing title</Text>
             <TextInput
               className={inputClass}
-              placeholder="e.g. Modern 3BHK in Bandra"
+              placeholder="e.g. Furnished PG near NSUT"
               placeholderTextColor="#9CA3AF"
               value={form.title}
               onChangeText={(v) => updateForm({ title: v })}
@@ -474,7 +517,7 @@ export default function CreatePropertyScreen() {
             <Text className={labelClass}>Description</Text>
             <TextInput
               className={`${inputClass} h-24`}
-              placeholder="Describe the property..."
+              placeholder="Describe the room, food, house rules, timings, and nearby landmarks..."
               placeholderTextColor="#9CA3AF"
               value={form.description}
               onChangeText={(v) => updateForm({ description: v })}
@@ -485,7 +528,7 @@ export default function CreatePropertyScreen() {
 
           {/* Price */}
           <View className={sectionClass}>
-            <Text className={labelClass}>Price / monthly rent (₹)</Text>
+            <Text className={labelClass}>Monthly rent (₹)</Text>
             <TextInput
               className={inputClass}
               placeholder="e.g. 15000 (monthly rent)"
@@ -499,9 +542,21 @@ export default function CreatePropertyScreen() {
             </Text>
           </View>
 
+          <View className={sectionClass}>
+            <Text className={labelClass}>Security deposit (₹)</Text>
+            <TextInput
+              className={inputClass}
+              placeholder="e.g. 10000 (optional)"
+              placeholderTextColor="#9CA3AF"
+              value={form.securityDeposit}
+              onChangeText={(v) => updateForm({ securityDeposit: v })}
+              keyboardType="numeric"
+            />
+          </View>
+
           {/* Property Type */}
           <View className={sectionClass}>
-            <Text className={labelClass}>Property Type</Text>
+            <Text className={labelClass}>Room type</Text>
             <View className="flex-row flex-wrap gap-2">
               {TYPES.map((t) => (
                 <TouchableOpacity
@@ -518,11 +573,55 @@ export default function CreatePropertyScreen() {
                       form.type === t ? "text-white" : "text-gray-600"
                     }`}
                   >
-                    {t}
+                    {t.replace(/_/g, " ")}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
+          </View>
+
+          <View className={sectionClass}>
+            <Text className={labelClass}>Preferred residents</Text>
+            <View className="flex-row flex-wrap gap-2">
+              {(["any", "male", "female"] as const).map((preference) => (
+                <TouchableOpacity
+                  key={preference}
+                  onPress={() => updateForm({ genderPreference: preference })}
+                  className={`px-4 py-2 rounded-full border ${
+                    form.genderPreference === preference
+                      ? "bg-blue-600 border-blue-600"
+                      : "bg-white border-gray-200"
+                  }`}
+                >
+                  <Text className={`text-sm font-semibold capitalize ${
+                    form.genderPreference === preference ? "text-white" : "text-gray-600"
+                  }`}>
+                    {preference === "any" ? "Any" : preference === "male" ? "Men" : "Women"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View className={sectionClass}>
+            <Toggle
+              label="Food included"
+              description="Meals are included in the monthly rent"
+              value={form.foodIncluded}
+              onChange={(v) => updateForm({ foodIncluded: v })}
+            />
+          </View>
+
+          <View className={sectionClass}>
+            <Text className={labelClass}>Amenities (comma-separated)</Text>
+            <TextInput
+              className={inputClass}
+              placeholder="Wi-Fi, laundry, AC, attached bathroom"
+              placeholderTextColor="#9CA3AF"
+              value={form.amenities}
+              onChangeText={(v) => updateForm({ amenities: v })}
+              maxLength={1000}
+            />
           </View>
 
           {/* Bedrooms / Bathrooms */}
@@ -594,6 +693,7 @@ export default function CreatePropertyScreen() {
               </TouchableOpacity>
             </View>
 
+            <Text className="text-xs text-gray-400 mb-2">Use current location only when you are physically at the PG; otherwise enter the PG’s coordinates manually.</Text>
             <View className="flex-row gap-3">
               <View className="flex-1">
                 <TextInput
@@ -646,7 +746,7 @@ export default function CreatePropertyScreen() {
               <ActivityIndicator color="white" />
             ) : (
               <Text className="text-white font-bold text-base">
-                List Property
+                Publish PG Listing
               </Text>
             )}
           </TouchableOpacity>
