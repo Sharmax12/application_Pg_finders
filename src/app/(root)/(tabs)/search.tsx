@@ -70,7 +70,7 @@ export default function SearchScreen() {
     const fetchResults = async () => {
       try {
         let query = supabase.from("properties").select(PROPERTY_COLUMNS);
-        query = query.eq("is_sold", false);
+        query = query.eq("is_sold", false).not("monthly_rent", "is", null);
 
         if (request.search) {
           const escapedSearch = request.search
@@ -82,7 +82,7 @@ export default function SearchScreen() {
         }
 
         if (request.type) {
-          query = query.eq("type", request.type);
+          query = query.eq("room_type", request.type);
         }
 
         if (request.bedrooms !== null) {
@@ -93,11 +93,11 @@ export default function SearchScreen() {
         }
 
         if (request.minPrice !== null) {
-          query = query.gte("price", request.minPrice);
+          query = query.gte("monthly_rent", request.minPrice);
         }
 
         if (request.maxPrice !== null) {
-          query = query.lte("price", request.maxPrice);
+          query = query.lte("monthly_rent", request.maxPrice);
         }
 
         const { data, error: fetchError } = await query.order("created_at", {
