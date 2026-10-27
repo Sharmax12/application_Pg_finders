@@ -10,7 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../../lib/superbase";
-import { Property } from "../../../../types/types";
+import { PROPERTY_COLUMNS, type Property } from "../../../../types/types";
 import { useFilterStore } from "../../../../store/filterStore";
 import { formatPrice } from "../../../../lib/utils";
 import PropertyCard from "../../../../components/PropertyCard";
@@ -69,7 +69,7 @@ export default function SearchScreen() {
 
     const fetchResults = async () => {
       try {
-        let query = supabase.from("properties").select("*");
+        let query = supabase.from("properties").select(PROPERTY_COLUMNS);
 
         if (request.search) {
           const escapedSearch = request.search
