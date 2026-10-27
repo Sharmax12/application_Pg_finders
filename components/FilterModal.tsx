@@ -11,11 +11,11 @@ import { useState } from "react";
 import { useFilterStore, PropertyType } from "../store/filterStore";
 
 const TYPES: { label: string; value: PropertyType }[] = [
-  { label: "All", value: null },
-  { label: "Apartment", value: "apartment" },
-  { label: "House", value: "house" },
-  { label: "Villa", value: "villa" },
-  { label: "Studio", value: "studio" },
+  { label: "All rooms", value: null },
+  { label: "Single room", value: "single_room" },
+  { label: "Shared room", value: "shared_room" },
+  { label: "Private room", value: "private_room" },
+  { label: "Entire PG", value: "entire_pg" },
 ];
 
 const BEDS = [
@@ -27,10 +27,10 @@ const BEDS = [
 ];
 
 const PRICE_PRESETS = [
-  { label: "Under ₹50L", min: null, max: 5000000 },
-  { label: "₹50L – ₹1Cr", min: 5000000, max: 10000000 },
-  { label: "₹1Cr – ₹2Cr", min: 10000000, max: 20000000 },
-  { label: "Above ₹2Cr", min: 20000000, max: null },
+  { label: "Under ₹5k/mo", min: null, max: 5000 },
+  { label: "₹5k–₹10k/mo", min: 5000, max: 10000 },
+  { label: "₹10k–₹20k/mo", min: 10000, max: 20000 },
+  { label: "Above ₹20k/mo", min: 20000, max: null },
 ];
 
 const chip = (active: boolean) =>
@@ -134,7 +134,7 @@ export default function FilterModal({
           contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* Property Type */}
+          {/* Room Type */}
           <Text className="text-base font-bold text-gray-800 mb-3">
             Property Type
           </Text>
@@ -182,7 +182,7 @@ export default function FilterModal({
             ))}
           </View>
 
-          {/* Price Range */}
+          {/* Monthly Rent */}
           <Text className="text-base font-bold text-gray-800 mb-3">
             Price Range (₹)
           </Text>
