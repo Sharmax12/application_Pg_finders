@@ -1,6 +1,6 @@
 import { useAuth, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,18 +13,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+type ClerkUser = NonNullable<ReturnType<typeof useUser>["user"]>;
+type SignOut = ReturnType<typeof useAuth>["signOut"];
+
 export default function Profile() {
   const { isLoaded, user } = useUser();
   const { signOut } = useAuth();
-  const [firstName, setFirstName] = useState(user?.firstName ?? "");
-  const [lastName, setLastName] = useState(user?.lastName ?? "");
-  const [saving, setSaving] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
-
-  useEffect(() => {
-    setFirstName(user?.firstName ?? "");
-    setLastName(user?.lastName ?? "");
-  }, [user?.id, user?.firstName, user?.lastName]);
 
   if (!isLoaded || !user) {
     return (
@@ -34,6 +28,21 @@ export default function Profile() {
       </View>
     );
   }
+
+  return <ProfileDetails user={user} signOut={signOut} />;
+}
+
+function ProfileDetails({
+  user,
+  signOut,
+}: {
+  user: ClerkUser;
+  signOut: SignOut;
+}) {
+  const [firstName, setFirstName] = useState(user.firstName ?? "");
+  const [lastName, setLastName] = useState(user.lastName ?? "");
+  const [saving, setSaving] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const email =
     user.primaryEmailAddress?.emailAddress ??
