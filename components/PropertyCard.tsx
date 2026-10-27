@@ -85,7 +85,7 @@ export default function PropertyCard({
 
           <View className="flex-row items-center justify-between">
             <Text className="text-blue-600 font-bold text-sm">
-              {formatPrice(property.price)}
+              {typeof property.monthly_rent === "number" ? `${formatPrice(property.monthly_rent)}/mo` : "Rent not set"}
             </Text>
             {property.is_sold && (
               <View className="bg-red-50 px-2 py-0.5 rounded-full">
