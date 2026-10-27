@@ -103,7 +103,8 @@ const makeProperty = (overrides: Partial<Property> = {}): Property => ({
   title: "Cedar House",
   description: "A comfortable home",
   price: 5000000,
-  type: "house",
+  type: "double_sharing",
+  listing_kind: "pg",
   bedrooms: 4,
   bathrooms: 2,
   area_sqft: 1200,
@@ -174,7 +175,7 @@ describe("HomeScreen", () => {
 });
 
 describe("SearchScreen", () => {
-  it("searches title and city using escaped PostgREST input", async () => {
+  it("sanitizes PostgREST filter delimiters in search text", async () => {
     enqueueResult({ data: [], error: null });
 
     const screen = await renderScreen(<SearchScreen />);
@@ -191,7 +192,7 @@ describe("SearchScreen", () => {
 
   it("applies property type, 4+ bedrooms, and inclusive price bounds", async () => {
     const filters = useFilterStore.getState();
-    filters.setType("house");
+    filters.setType("double_sharing");
     filters.setBedrooms(4);
     filters.setMinPrice(0);
     filters.setMaxPrice(10000000);
@@ -202,7 +203,7 @@ describe("SearchScreen", () => {
     await waitFor(() => {
       expect(mockQueries).toHaveLength(1);
     });
-    expect(mockQueries[0].eq).toContainEqual(["type", "house"]);
+    expect(mockQueries[0].eq).toContainEqual(["type", "double_sharing"]);
     expect(mockQueries[0].gte).toContainEqual(["bedrooms", 4]);
     expect(mockQueries[0].gte).toContainEqual(["price", 0]);
     expect(mockQueries[0].lte).toContainEqual(["price", 10000000]);
