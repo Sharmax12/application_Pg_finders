@@ -64,7 +64,9 @@ export default function Saved() {
           const { data, error: propertyError } = await authSupabase
             .from("properties")
             .select(PROPERTY_COLUMNS)
-            .in("id", propertyIds);
+            .in("id", propertyIds)
+            .eq("listing_kind", "pg")
+            .eq("is_sold", false);
 
           if (propertyError) throw propertyError;
 
