@@ -30,6 +30,12 @@ const inputClass =
 const labelClass = "text-sm font-semibold text-gray-700 mb-1.5";
 const sectionClass = "mb-5";
 
+function isValidDateOnly(value: string): boolean {
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 interface FormState {
   title: string;
   description: string;
@@ -38,6 +44,7 @@ interface FormState {
   genderPreference: "any" | "male" | "female";
   foodIncluded: boolean;
   amenities: string;
+  availableFrom: string;
   type: PropertyType;
   bedrooms: number;
   bathrooms: number;
@@ -59,6 +66,7 @@ const INITIAL_FORM: FormState = {
   genderPreference: "any",
   foodIncluded: false,
   amenities: "",
+  availableFrom: "",
   type: "private_room",
   bedrooms: 1,
   bathrooms: 1,
@@ -285,6 +293,11 @@ export default function CreatePropertyScreen() {
       return Alert.alert("Validation", "Enter valid map coordinates.");
     }
 
+    const availableFrom = form.availableFrom.trim();
+    if (availableFrom && !isValidDateOnly(availableFrom)) {
+      return Alert.alert("Validation", "Availability date must be a valid YYYY-MM-DD date.");
+    }
+
     setSubmitting(true);
     try {
       const { error } = await authSupabase.from("properties").insert({
@@ -299,7 +312,7 @@ export default function CreatePropertyScreen() {
         gender_preference: form.genderPreference,
         food_included: form.foodIncluded,
         amenities: form.amenities.split(",").map((value) => value.trim()).filter(Boolean).slice(0, 30),
-        available_from: null,
+        available_from: availableFrom || null,
         bedrooms: form.bedrooms,
         bathrooms: form.bathrooms,
         area_sqft: areaNum,
@@ -609,6 +622,18 @@ export default function CreatePropertyScreen() {
               description="Meals are included in the monthly rent"
               value={form.foodIncluded}
               onChange={(v) => updateForm({ foodIncluded: v })}
+            />
+          </View>
+
+          <View className={sectionClass}>
+            <Text className={labelClass}>Available from (optional)</Text>
+            <TextInput
+              className={inputClass}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#9CA3AF"
+              value={form.availableFrom}
+              onChangeText={(v) => updateForm({ availableFrom: v })}
+              autoCapitalize="none"
             />
           </View>
 
