@@ -122,10 +122,11 @@ Use check constraints for non-negative prices/deposits and valid statuses, forei
 2. **Never use a Supabase service-role/secret key in the app.** The mobile client may contain the Supabase publishable key and Clerk publishable key; neither is an authorization policy.
 3. **Verify Clerk token claims in Supabase policies.** The client passes a Clerk session token to Supabase. Ensure the live project has the matching third-party auth integration and policies that use the correct identity claim.
 4. **Verify the `users.clerk_id` unique constraint and insert policy.** A unique constraint prevents duplicate profiles; the hook reads first, attempts an insert, and re-reads if another device creates the profile concurrently.
-5. **Audit the admin mutation routes.** Client-side hiding of the Create tab is convenience only. Test a non-admin token directly against INSERT/UPDATE/DELETE operations.
+5. **Protect admin-role assignment separately.** The client reads `users.is_admin` to display admin UI, but a client must never be able to set or change that field. Use column-level grants or a separate admin-role table managed only by a trusted server/service role; never rely on a default value or a hidden tab.
 6. **Protect contact details and enquiries.** Do not expose owner private phone/email data in public listing queries by default. Get appropriate user consent before opening external messaging or sharing contact details.
-7. **Validate listing submissions and uploads.** Constrain image type/size, verify ownership, limit report/enquiry abuse, and avoid accepting arbitrary client-provided admin fields.
-8. **Review environment configuration and rotation.** Keep `.env` out of Git; only publishable keys belong in `EXPO_PUBLIC_*` variables. Rotate any secret if it was ever committed.
+7. **Audit the admin mutation routes.** Client-side hiding of the Create tab is convenience only. Test a non-admin token directly against INSERT/UPDATE/DELETE operations, including attempts to set `is_admin` on INSERT or UPDATE.
+8. **Validate listing submissions and uploads.** Constrain image type/size, verify ownership, limit report/enquiry abuse, and avoid accepting arbitrary client-provided admin fields.
+9. **Review environment configuration and rotation.** Keep `.env` out of Git; only publishable keys belong in `EXPO_PUBLIC_*` variables. Rotate any secret if it was ever committed.
 
 ## Release roadmap and acceptance criteria
 
