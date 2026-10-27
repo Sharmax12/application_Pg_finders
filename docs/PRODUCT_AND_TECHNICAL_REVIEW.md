@@ -39,11 +39,11 @@ These code changes still require the latest CI run and device testing before the
 
 ### Dependency audit finding
 
-The branch's CI audit currently reports four high-severity dependency advisories: 
-- Zod < 4.6.6 (GHSA-mrhx-c7xc-m3w5), pulled in by Expo CLI; the audit resolver recommends a major Expo downgrade instead of a verified SDK 58-compatible fix.
-- node-forge was initially locked to 1.4.0 (GHSA-86w9-cpqp-85rv). The npm registry now lists 1.4.2, and this branch updates the lockfile within the existing `^1.4.0` dependency range. CI must confirm the advisory disappears from the resolved dependency graph.
+The initial CI audit reported four high-severity vulnerable package entries across the Expo/Zod and node-forge dependency chains. The branch updates the transitive `node-forge` lockfile entry from 1.4.0 to 1.4.2 within the existing `^1.4.0` range. The subsequent audit no longer reports node-forge, and CI has passed the full lint, type-check and test workflow on the profile-test fix.
 
-The remaining Zod/Expo CLI finding is a dependency-chain issue in Expo's tooling, not proof of an exploitable user-facing endpoint. Do not hide it or apply a blind major-version override. Recheck for an SDK 58-compatible Expo CLI/Zod update, evaluate a tested compatible patch/override, or record a time-bounded risk exception before public release. Track the advisory output in GitHub Actions logs.
+The latest captured `npm audit` summary after the node-forge update reports three high-severity package entries, all stemming from one underlying Zod advisory: Zod < 4.6.6 (GHSA-mrhx-c7xc-m3w5) pulled in by Expo CLI. The audit resolver recommends downgrading Expo to 54.0.38, which is a major SDK downgrade and is not an appropriate blind fix for an app built on SDK 58.
+
+This remaining finding is in Expo's development/build tooling dependency chain; it is not proof of an exploitable user-facing endpoint. Do not hide it or apply a blind major-version override. Recheck for an SDK 58-compatible Expo CLI/Zod update, evaluate a tested compatible patch/override, or record a time-bounded risk exception before public release. Track the advisory output in GitHub Actions logs.
 
 ## Product recommendation
 
