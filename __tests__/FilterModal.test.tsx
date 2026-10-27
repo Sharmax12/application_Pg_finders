@@ -21,17 +21,17 @@ it("syncs price inputs when opened and applies or resets filters", async () => {
     <FilterModal visible={false} onClose={onClose} />
   );
   await act(async () => {
-    useFilterStore.getState().setMinPrice(5000000);
-    useFilterStore.getState().setMaxPrice(10000000);
+    useFilterStore.getState().setMinPrice(5000);
+    useFilterStore.getState().setMaxPrice(10000);
   });
   await completeEvent(screen.rerender(<FilterModal visible onClose={onClose} />));
 
-  expect(screen.getByDisplayValue("5000000")).toBeTruthy();
-  expect(screen.getByDisplayValue("10000000")).toBeTruthy();
+  expect(screen.getByDisplayValue("5000")).toBeTruthy();
+  expect(screen.getByDisplayValue("10000")).toBeTruthy();
 
   await completeEvent(fireEvent.press(screen.getByText("Apply Filters (2)")));
-  expect(useFilterStore.getState().minPrice).toBe(5000000);
-  expect(useFilterStore.getState().maxPrice).toBe(10000000);
+  expect(useFilterStore.getState().minPrice).toBe(5000);
+  expect(useFilterStore.getState().maxPrice).toBe(10000);
 
   await completeEvent(fireEvent.press(screen.getByText("Reset")));
   await waitFor(() => {
@@ -48,18 +48,18 @@ it("applies price inputs alongside selected type and bedroom filters", async () 
   );
 
   await completeEvent(
-    fireEvent.changeText(screen.getByPlaceholderText("0"), "2000000")
+    fireEvent.changeText(screen.getByPlaceholderText("0"), "20000")
   );
   await completeEvent(
-    fireEvent.changeText(screen.getByPlaceholderText("Any"), "9000000")
+    fireEvent.changeText(screen.getByPlaceholderText("Any"), "40000")
   );
   await completeEvent(fireEvent.press(screen.getByText("Apply Filters (2)")));
 
   const filters = useFilterStore.getState();
   expect(filters.type).toBe("double_sharing");
   expect(filters.bedrooms).toBe(4);
-  expect(filters.minPrice).toBe(2000000);
-  expect(filters.maxPrice).toBe(9000000);
+  expect(filters.minPrice).toBe(20000);
+  expect(filters.maxPrice).toBe(40000);
 
   await completeEvent(fireEvent.press(screen.getByText("Reset")));
   expect(useFilterStore.getState().type).toBeNull();
