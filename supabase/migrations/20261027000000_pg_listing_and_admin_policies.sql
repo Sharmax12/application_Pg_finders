@@ -180,11 +180,88 @@ create policy pgfinders_properties_admin_delete
   to anon, authenticated
   using (public.is_pgfinders_admin());
 
+-- Saved properties are private per-Clerk-user data. Restrictive policies prevent
+-- broad legacy permissive policies from exposing one user's shortlist to another.
+alter table public.saved_properties enable row level security;
+
+drop policy if exists pgfinders_saved_properties_select_self on public.saved_properties;
+create policy pgfinders_saved_properties_select_self
+  on public.saved_properties
+  for select
+  to authenticated
+  using (user_clerk_id = (select auth.jwt() ->> 'sub'));
+
+drop policy if exists pgfinders_saved_properties_insert_self on public.saved_properties;
+create policy pgfinders_saved_properties_insert_self
+  on public.saved_properties
+  for insert
+  to authenticated
+  with check (
+    user_clerk_id = (select auth.jwt() ->> 'sub')
+    and exists (
+      select 1
+      from public.properties
+      where properties.id = property_id
+        and properties.listing_kind = 'pg'
+        and properties.is_sold is false
+    )
+  );
+
+drop policy if exists pgfinders_saved_properties_delete_self on public.saved_properties;
+create policy pgfinders_saved_properties_delete_self
+  on public.saved_properties
+  for delete
+  to authenticated
+  using (user_clerk_id = (select auth.jwt() ->> 'sub'));
+
+drop policy if exists pgfinders_saved_properties_select_self_restrict on public.saved_properties;
+create policy pgfinders_saved_properties_select_self_restrict
+  on public.saved_properties
+  as restrictive
+  for select
+  to anon, authenticated
+  using (user_clerk_id = (select auth.jwt() ->> 'sub'));
+
+drop policy if exists pgfinders_saved_properties_insert_self_restrict on public.saved_properties;
+create policy pgfinders_saved_properties_insert_self_restrict
+  on public.saved_properties
+  as restrictive
+  for insert
+  to anon, authenticated
+  with check (
+    user_clerk_id = (select auth.jwt() ->> 'sub')
+    and exists (
+      select 1
+      from public.properties
+      where properties.id = property_id
+        and properties.listing_kind = 'pg'
+        and properties.is_sold is false
+    )
+  );
+
+drop policy if exists pgfinders_saved_properties_update_deny on public.saved_properties;
+create policy pgfinders_saved_properties_update_deny
+  on public.saved_properties
+  as restrictive
+  for update
+  to anon, authenticated
+  using (false)
+  with check (false);
+
+drop policy if exists pgfinders_saved_properties_delete_self_restrict on public.saved_properties;
+create policy pgfinders_saved_properties_delete_self_restrict
+  on public.saved_properties
+  as restrictive
+  for delete
+  to anon, authenticated
+  using (user_clerk_id = (select auth.jwt() ->> 'sub'));
+
 -- Images are read through public URLs by the app. The uploader places each object
 -- under <Clerk user id>/..., and only an authenticated app admin may mutate this bucket.
-update storage.buckets
-set public = true
-where id = 'property-images';
+insert into storage.buckets (id, name, public)
+values ('property-images', 'property-images', true)
+on conflict (id) do update
+set public = excluded.public;
 
 drop policy if exists pgfinders_property_images_admin_insert_allow on storage.objects;
 create policy pgfinders_property_images_admin_insert_allow
