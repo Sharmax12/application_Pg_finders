@@ -348,7 +348,7 @@ export default function PropertyDetailScreen() {
               label="Area"
               value={typeof property.area_sqft === "number" && property.area_sqft > 0 ? `${property.area_sqft} ft²` : "—"}
             />
-            <SpecItem icon="home-outline" label="Type" value={property.type} />
+            <SpecItem icon="home-outline" label="Room type" value={property.room_type.replace(/_/g, " ")} />
           </View>
 
           <View className="flex-row flex-wrap gap-2 mb-5">
@@ -491,7 +491,7 @@ export default function PropertyDetailScreen() {
                     color="#D97706"
                   />
                   <Text className="text-amber-600 font-semibold">
-                    Mark Sold
+                    Mark unavailable
                   </Text>
                 </TouchableOpacity>
               )}
