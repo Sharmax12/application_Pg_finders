@@ -40,11 +40,13 @@ export default function HomeScreen() {
               .from("properties")
               .select(PROPERTY_COLUMNS)
               .eq("is_featured", true)
+              .eq("is_sold", false)
               .order("created_at", { ascending: false }),
             supabase
               .from("properties")
               .select(PROPERTY_COLUMNS)
               .eq("is_featured", false)
+              .eq("is_sold", false)
               .order("created_at", { ascending: false }),
           ]);
 
