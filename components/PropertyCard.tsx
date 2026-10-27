@@ -102,7 +102,7 @@ export default function PropertyCard({
               <View className="flex-row items-center gap-1">
                 <Ionicons name="expand-outline" size={11} color="#6B7280" />
                 <Text className="text-xs text-gray-500">
-                  {property.area_sqft} ft²
+                  {typeof property.area_sqft === "number" && property.area_sqft > 0 ? `${property.area_sqft} ft²` : "Area n/a"}
                 </Text>
               </View>
             </View>
