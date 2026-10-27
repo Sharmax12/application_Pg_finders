@@ -1,4 +1,4 @@
-import FeaturedCard from "../../../../components/FeatureCard";
+import Featured PGsCard from "../../../../components/FeatureCard";
 import PropertyCard from "../../../../components/PropertyCard";
 import { supabase } from "../../../../lib/superbase";
 import { PROPERTY_COLUMNS, type Property } from "../../../../types/types";
@@ -21,7 +21,7 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const [featured, setFeatured] = useState<Property[]>([]);
-  const [recommended, setRecommended] = useState<Property[]>([]);
+  const [recommended, setRecommended PGs] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -41,6 +41,7 @@ export default function HomeScreen() {
               .select(PROPERTY_COLUMNS)
               .eq("is_featured", true)
               .eq("is_sold", false)
+              .not("monthly_rent", "is", null)
               .order("created_at", { ascending: false }),
             supabase
               .from("properties")
@@ -122,7 +123,7 @@ export default function HomeScreen() {
             >
               <Ionicons name="search-outline" size={18} color="#9CA3AF" />
               <Text className="text-gray-400 text-sm flex-1">
-                Search properties, cities...
+                Search PGs, neighbourhoods...
               </Text>
               <TouchableOpacity
                 onPress={() =>
@@ -185,7 +186,7 @@ export default function HomeScreen() {
           !loading && !error
             ? () => (
                 <View className="items-center py-10">
-                  <Text className="text-gray-400">No properties found</Text>
+                  <Text className="text-gray-400">No PGs found yet</Text>
                 </View>
               )
             : undefined
