@@ -6,37 +6,63 @@ import { useUserStore } from "../store/userStore";
 export const useUserSync = () => {
   const { user } = useUser();
   const setIsAdmin = useUserStore((state) => state.setIsAdmin);
-  const authSupabase = useSuperbase(); // ← authenticated client
+  const authSupabase = useSuperbase();
 
   useEffect(() => {
-    if (!user) return;
-    syncUser();
-  }, [user]);
+    let isCurrent = true;
 
-  const syncUser = async () => {
-    const { data } = await authSupabase
-      .from("users")
-      .select("clerk_id, is_admin")
-      .eq("clerk_id", user!.id)
-      .single();
-
-    if (data) {
-      setIsAdmin(data.is_admin ?? false);
-      return;
+    if (!user) {
+      setIsAdmin(false);
+      return () => {
+        isCurrent = false;
+      };
     }
 
-    const { data: newUser } = await authSupabase
-      .from("users")
-      .insert({
-        clerk_id: user!.id,
-        email: user!.emailAddresses[0].emailAddress,
-        first_name: user!.firstName,
-        last_name: user!.lastName,
-        avatar_url: user!.imageUrl,
-      })
-      .select("is_admin")
-      .single();
+    const syncUser = async () => {
+      const email =
+        user.primaryEmailAddress?.emailAddress ??
+        user.emailAddresses[0]?.emailAddress;
 
-    setIsAdmin(newUser?.is_admin ?? false);
-  };
+      if (!email) {
+        console.error("Cannot sync Clerk user without an email address.");
+        if (isCurrent) setIsAdmin(false);
+        return;
+      }
+
+      try {
+        // clerk_id must have a UNIQUE constraint in Supabase for this upsert.
+        // The database must also have RLS policies for the signed-in user's row.
+        const { data, error } = await authSupabase
+          .from("users")
+          .upsert(
+            {
+              clerk_id: user.id,
+              email,
+              first_name: user.firstName,
+              last_name: user.lastName,
+              avatar_url: user.imageUrl,
+            },
+            { onConflict: "clerk_id" }
+          )
+          .select("is_admin")
+          .single();
+
+        if (error) throw error;
+
+        if (isCurrent) {
+          setIsAdmin(data?.is_admin === true);
+        }
+      } catch (error) {
+        console.error("Failed to sync Clerk user with Supabase:", error);
+        // Fail closed in the UI. Database RLS must independently protect admin actions.
+        if (isCurrent) setIsAdmin(false);
+      }
+    };
+
+    void syncUser();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [authSupabase, setIsAdmin, user]);
 };
