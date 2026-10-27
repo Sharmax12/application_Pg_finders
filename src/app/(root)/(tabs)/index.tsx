@@ -1,7 +1,7 @@
 import FeaturedCard from "../../../../components/FeatureCard";
 import PropertyCard from "../../../../components/PropertyCard";
 import { supabase } from "../../../../lib/superbase";
-import { Property } from "../../../../types/types";
+import { PROPERTY_COLUMNS, type Property } from "../../../../types/types";
 import { useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -38,12 +38,12 @@ export default function HomeScreen() {
           const [featuredResult, recommendedResult] = await Promise.all([
             supabase
               .from("properties")
-              .select("*")
+              .select(PROPERTY_COLUMNS)
               .eq("is_featured", true)
               .order("created_at", { ascending: false }),
             supabase
               .from("properties")
-              .select("*")
+              .select(PROPERTY_COLUMNS)
               .eq("is_featured", false)
               .order("created_at", { ascending: false }),
           ]);
