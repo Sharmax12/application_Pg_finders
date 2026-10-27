@@ -54,8 +54,9 @@ export default function MapScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity
-          onPress={() => {
+        {hasCoordinates && (
+          <TouchableOpacity
+            onPress={() => {
             void Linking.openURL(
               `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
             ).catch((error) => {
@@ -69,7 +70,8 @@ export default function MapScreen() {
           <Text className="text-blue-600 text-xs font-semibold">
             Google Maps
           </Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Full Screen Map */}
