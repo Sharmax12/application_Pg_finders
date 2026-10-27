@@ -4,7 +4,6 @@ import { formatPrice } from "../../../../lib/utils";
 import { supabase } from "../../../../lib/superbase";
 import { useUserStore } from "../../../../store/userStore";
 import type { Property } from "../../../../types/types";
-import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -31,7 +30,6 @@ const ADMIN_PHONE = "919999999999"; // replace with your WhatsApp number
 
 export default function PropertyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { userId } = useAuth();
   const router = useRouter();
   const isAdmin = useUserStore((state) => state.isAdmin);
 
@@ -45,17 +43,57 @@ export default function PropertyDetailScreen() {
   const authSupabase = useSupabase();
 
   useEffect(() => {
-    fetchProperty();
+    let isCurrent = true;
+
+    const fetchProperty = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("properties")
+          .select("*")
+          .eq("id", id)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (isCurrent) {
+          setProperty(data);
+        }
+      } catch (fetchError) {
+        console.error("Failed to fetch property details:", fetchError);
+        if (isCurrent) {
+          setProperty(null);
+        }
+      } finally {
+        if (isCurrent) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void fetchProperty();
+
+    return () => {
+      isCurrent = false;
+    };
   }, [id]);
 
-  const fetchProperty = async () => {
-    const { data } = await supabase
-      .from("properties")
-      .select("*")
-      .eq("id", id)
-      .single();
-    setProperty(data);
-    setLoading(false);
+  const deleteProperty = async () => {
+    try {
+      const { error } = await authSupabase
+        .from("properties")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        throw error;
+      }
+      router.replace("/(root)/(tabs)");
+    } catch (deleteError) {
+      console.error("Failed to delete property:", deleteError);
+      Alert.alert("Unable to delete property", "Please try again.");
+    }
   };
 
   const handleDelete = () => {
@@ -64,12 +102,28 @@ export default function PropertyDetailScreen() {
       {
         text: "Delete",
         style: "destructive",
-        onPress: async () => {
-          await authSupabase.from("properties").delete().eq("id", id);
-          router.replace("/(root)/(tabs)");
+        onPress: () => {
+          void deleteProperty();
         },
       },
     ]);
+  };
+
+  const markPropertySold = async () => {
+    try {
+      const { error } = await authSupabase
+        .from("properties")
+        .update({ is_sold: true })
+        .eq("id", id);
+
+      if (error) {
+        throw error;
+      }
+      setProperty((prev) => (prev ? { ...prev, is_sold: true } : prev));
+    } catch (updateError) {
+      console.error("Failed to mark property as sold:", updateError);
+      Alert.alert("Unable to update property", "Please try again.");
+    }
   };
 
   const handleMarkSold = () => {
@@ -77,12 +131,8 @@ export default function PropertyDetailScreen() {
       { text: "Cancel", style: "cancel" },
       {
         text: "Mark Sold",
-        onPress: async () => {
-          await authSupabase
-            .from("properties")
-            .update({ is_sold: true })
-            .eq("id", id);
-          setProperty((prev) => (prev ? { ...prev, is_sold: true } : prev));
+        onPress: () => {
+          void markPropertySold();
         },
       },
     ]);
@@ -93,7 +143,17 @@ export default function PropertyDetailScreen() {
     const url = `https://wa.me/${ADMIN_PHONE}?text=${encodeURIComponent(
       message
     )}`;
-    Linking.openURL(url);
+    void Linking.openURL(url).catch((error) => {
+      console.error("Failed to open WhatsApp contact:", error);
+      Alert.alert("Unable to open WhatsApp", "Please try again.");
+    });
+  };
+
+  const handleToggleSave = () => {
+    void toggleSave().catch((error) => {
+      console.error("Failed to update saved property:", error);
+      Alert.alert("Unable to update saved properties", "Please try again.");
+    });
   };
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -123,11 +183,11 @@ export default function PropertyDetailScreen() {
     property.latitude + 0.003
   }&layer=mapnik&marker=${property.latitude}%2C${property.longitude}`;
 
-  const isLongDesc = (property.description?.length ?? 0) > 150;
+  const isLongDesc = property.description.length > 150;
   const displayDesc =
     expanded || !isLongDesc
       ? property.description
-      : property.description?.slice(0, 150) + "...";
+      : property.description.slice(0, 150) + "...";
 
   return (
     <View className="flex-1 bg-white">
@@ -139,7 +199,11 @@ export default function PropertyDetailScreen() {
               data={property.images}
               keyExtractor={(_, i) => i.toString()}
               renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => setImageViewerVisible(true)}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setImageViewerVisible(true);
+                  }}
+                >
                   <Image
                     source={{ uri: item }}
                     style={{ width, height: 300 }}
@@ -180,14 +244,16 @@ export default function PropertyDetailScreen() {
           <SafeAreaView className="absolute top-0 left-0 right-0">
             <View className="flex-row items-center justify-between px-4 pt-2">
               <TouchableOpacity
-                onPress={() => router.back()}
+                onPress={() => {
+                  router.back();
+                }}
                 className="w-10 h-10 bg-white rounded-full items-center justify-center"
                 style={{ elevation: 3 }}
               >
                 <Ionicons name="arrow-back" size={20} color="#111827" />
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={toggleSave}
+                onPress={handleToggleSave}
                 disabled={saveLoading}
                 className="w-10 h-10 bg-white rounded-full items-center justify-center"
                 style={{ elevation: 3 }}
@@ -264,7 +330,11 @@ export default function PropertyDetailScreen() {
             {displayDesc}
           </Text>
           {isLongDesc && (
-            <TouchableOpacity onPress={() => setExpanded(!expanded)}>
+            <TouchableOpacity
+              onPress={() => {
+                setExpanded(!expanded);
+              }}
+            >
               <Text className="text-blue-600 text-sm font-medium mb-5">
                 {expanded ? "Show less" : "Read more"}
               </Text>
@@ -286,7 +356,7 @@ export default function PropertyDetailScreen() {
 
           {/* Map Preview */}
           <TouchableOpacity
-            onPress={() =>
+            onPress={() => {
               router.push({
                 pathname: "/(root)/property/map",
                 params: {
@@ -295,8 +365,8 @@ export default function PropertyDetailScreen() {
                   title: property.title,
                   address: `${property.address}, ${property.city}`,
                 },
-              })
-            }
+              });
+            }}
             activeOpacity={0.9}
             className="rounded-2xl overflow-hidden mb-6"
             style={{ height: 200 }}
@@ -361,7 +431,9 @@ export default function PropertyDetailScreen() {
         images={property.images.map((uri) => ({ uri }))}
         imageIndex={activeIndex}
         visible={imageViewerVisible}
-        onRequestClose={() => setImageViewerVisible(false)}
+        onRequestClose={() => {
+          setImageViewerVisible(false);
+        }}
       />
     </View>
   );

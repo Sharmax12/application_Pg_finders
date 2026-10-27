@@ -1,4 +1,5 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import type { ReactElement } from "react";
 import type { Property } from "../types/types";
 import { useFilterStore } from "../store/filterStore";
 import HomeScreen from "../src/app/(root)/(tabs)/index";
@@ -27,6 +28,8 @@ type Query = {
 
 const mockResults: (Result | Promise<Result>)[] = [];
 const mockQueries: QueryRecord[] = [];
+const renderScreen = (element: ReactElement) => Promise.resolve(render(element));
+const completeEvent = (event: unknown) => Promise.resolve(event);
 
 const mockFrom = jest.fn(() => {
   const record: QueryRecord = { eq: [], gte: [], lte: [], or: [] };
@@ -136,7 +139,7 @@ describe("HomeScreen", () => {
     enqueueResult({ data: [makeProperty({ is_featured: true })], error: null });
     enqueueResult({ data: [makeProperty({ title: "Recommended home" })], error: null });
 
-    const screen = await render(<HomeScreen />);
+    const screen = await renderScreen(<HomeScreen />);
 
     expect(await screen.findByText("Cedar House")).toBeTruthy();
     expect(await screen.findByText("Recommended home")).toBeTruthy();
@@ -148,7 +151,7 @@ describe("HomeScreen", () => {
     enqueueResult({ data: [], error: null });
     enqueueResult({ data: [], error: null });
 
-    const screen = await render(<HomeScreen />);
+    const screen = await renderScreen(<HomeScreen />);
 
     expect(await screen.findByText("No properties found")).toBeTruthy();
   });
@@ -157,12 +160,12 @@ describe("HomeScreen", () => {
     enqueueResult(Promise.reject(new Error("Network unavailable")));
     enqueueResult({ data: [], error: null });
 
-    const screen = await render(<HomeScreen />);
+    const screen = await renderScreen(<HomeScreen />);
 
     expect(
       await screen.findByText("Unable to load properties. Please try again.")
     ).toBeTruthy();
-    fireEvent.press(screen.getByText("Try again"));
+    await completeEvent(fireEvent.press(screen.getByText("Try again")));
 
     await waitFor(() => {
       expect(mockFrom).toHaveBeenCalledTimes(4);
@@ -174,9 +177,9 @@ describe("SearchScreen", () => {
   it("searches title and city using escaped PostgREST input", async () => {
     enqueueResult({ data: [], error: null });
 
-    const screen = await render(<SearchScreen />);
+    const screen = await renderScreen(<SearchScreen />);
     const input = screen.getByPlaceholderText("Search by title or city...");
-    fireEvent.changeText(input, 'Cedar", (West)');
+    await completeEvent(fireEvent.changeText(input, 'Cedar", (West)'));
 
     await waitFor(() => {
       expect(mockQueries).toHaveLength(2);
@@ -194,7 +197,7 @@ describe("SearchScreen", () => {
     filters.setMaxPrice(10000000);
     enqueueResult({ data: [], error: null });
 
-    await render(<SearchScreen />);
+    await renderScreen(<SearchScreen />);
 
     await waitFor(() => {
       expect(mockQueries).toHaveLength(1);
@@ -209,7 +212,7 @@ describe("SearchScreen", () => {
     useFilterStore.getState().setBedrooms(2);
     enqueueResult({ data: [], error: null });
 
-    await render(<SearchScreen />);
+    await renderScreen(<SearchScreen />);
 
     await waitFor(() => {
       expect(mockQueries).toHaveLength(1);
@@ -226,15 +229,17 @@ describe("SearchScreen", () => {
       })
     );
 
-    const screen = await render(<SearchScreen />);
+    const screen = await renderScreen(<SearchScreen />);
     expect(await screen.findByText("Searching...")).toBeTruthy();
     resolveRequest({ data: [], error: null });
     expect(await screen.findByText("No properties found")).toBeTruthy();
 
     enqueueResult({ data: null, error: { message: "Request failed" } });
-    fireEvent.changeText(
-      screen.getByPlaceholderText("Search by title or city..."),
-      "Pune"
+    await completeEvent(
+      fireEvent.changeText(
+        screen.getByPlaceholderText("Search by title or city..."),
+        "Pune"
+      )
     );
     expect(
       await screen.findByText("Unable to search properties. Please try again.")
@@ -250,10 +255,12 @@ describe("SearchScreen", () => {
     );
     enqueueResult({ data: [makeProperty({ title: "New result" })], error: null });
 
-    const screen = await render(<SearchScreen />);
-    fireEvent.changeText(
-      screen.getByPlaceholderText("Search by title or city..."),
-      "new"
+    const screen = await renderScreen(<SearchScreen />);
+    await completeEvent(
+      fireEvent.changeText(
+        screen.getByPlaceholderText("Search by title or city..."),
+        "new"
+      )
     );
 
     expect(await screen.findByText("New result")).toBeTruthy();
