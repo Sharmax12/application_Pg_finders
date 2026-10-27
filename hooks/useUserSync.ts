@@ -30,28 +30,48 @@ export const useUserSync = () => {
       }
 
       try {
-        // clerk_id must have a UNIQUE constraint in Supabase for this upsert.
-        // The database must also have RLS policies for the signed-in user's row.
-        const { data, error } = await authSupabase
+        const { data: existingUser, error: lookupError } = await authSupabase
           .from("users")
-          .upsert(
-            {
-              clerk_id: user.id,
-              email,
-              first_name: user.firstName,
-              last_name: user.lastName,
-              avatar_url: user.imageUrl,
-            },
-            { onConflict: "clerk_id" }
-          )
+          .select("clerk_id, is_admin")
+          .eq("clerk_id", user.id)
+          .maybeSingle();
+
+        if (lookupError) throw lookupError;
+
+        if (existingUser) {
+          if (isCurrent) setIsAdmin(existingUser.is_admin === true);
+          return;
+        }
+
+        const { data: newUser, error: insertError } = await authSupabase
+          .from("users")
+          .insert({
+            clerk_id: user.id,
+            email,
+            first_name: user.firstName,
+            last_name: user.lastName,
+            avatar_url: user.imageUrl,
+          })
           .select("is_admin")
           .single();
 
-        if (error) throw error;
+        if (insertError) {
+          // Another render/device may have created the profile after our lookup.
+          // Re-read once so the unique-clerk_id race does not leave the UI stuck.
+          const { data: concurrentUser, error: concurrentLookupError } =
+            await authSupabase
+              .from("users")
+              .select("clerk_id, is_admin")
+              .eq("clerk_id", user.id)
+              .maybeSingle();
 
-        if (isCurrent) {
-          setIsAdmin(data?.is_admin === true);
+          if (concurrentLookupError || !concurrentUser) throw insertError;
+
+          if (isCurrent) setIsAdmin(concurrentUser.is_admin === true);
+          return;
         }
+
+        if (isCurrent) setIsAdmin(newUser?.is_admin === true);
       } catch (error) {
         console.error("Failed to sync Clerk user with Supabase:", error);
         // Fail closed in the UI. Database RLS must independently protect admin actions.
