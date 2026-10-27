@@ -31,7 +31,14 @@ alter table public.properties
   drop constraint if exists pgfinders_properties_owner_whatsapp;
 alter table public.properties
   add constraint pgfinders_properties_owner_whatsapp
-  check (owner_whatsapp is null or owner_whatsapp ~ '^[0-9]{10,15}
+  check (
+    owner_whatsapp is null
+    or (
+      length(owner_whatsapp) between 10 and 15
+      and owner_whatsapp !~ '[^0-9]'
+    )
+  );
+
 alter table public.properties
   drop constraint if exists pgfinders_properties_deposit_nonnegative;
 alter table public.properties
