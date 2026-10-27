@@ -4,7 +4,7 @@
 
 PGFinders is a mobile-first product designed to make finding and comparing paying-guest (PG) accommodation easier for students and young professionals. The goal is to bring important information—such as rent, location, amenities, food options, and house rules—into one place so people can make better-informed decisions.
 
-> **Project Status:** Active development. The app includes Clerk sign-in, PG listing discovery, monthly rent and deposit details, room/sharing types, food and amenities, house rules, search filters, saved listings, and admin-only listing publishing. Supabase schema and policies must be migrated before deploying these features. Notifications and verified direct owner enquiries remain future work.
+> **Project Status:** Active development. The app includes Clerk sign-in, PG listing discovery, monthly rent and deposit details, room/sharing types, food and amenities, house rules, owner/manager WhatsApp contacts, search filters, saved listings, and admin-only listing publishing. Supabase schema and policies must be migrated before deploying these features. Notifications and verified direct owner enquiries remain future work.
 
 ---
 
