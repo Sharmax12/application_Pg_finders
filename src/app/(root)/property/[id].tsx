@@ -4,7 +4,7 @@ import ImageViewer from "../../../../components/ImageViewer";
 import { formatPrice } from "../../../../lib/utils";
 import { supabase } from "../../../../lib/superbase";
 import { useUserStore } from "../../../../store/userStore";
-import { PROPERTY_COLUMNS, type Property } from "../../../../types/types";
+import { formatListingType, PROPERTY_COLUMNS, type Property } from "../../../../types/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -57,7 +57,16 @@ export default function PropertyDetailScreen() {
         }
 
         if (isCurrent) {
-          setProperty(data);
+          setProperty({
+            ...data,
+            description: typeof data.description === "string" ? data.description : "",
+            images: Array.isArray(data.images)
+              ? data.images.filter(
+                  (image: unknown): image is string =>
+                    typeof image === "string" && image.length > 0
+                )
+              : [],
+          });
         }
       } catch (fetchError) {
         console.error("Failed to fetch property details:", fetchError);
@@ -139,7 +148,7 @@ export default function PropertyDetailScreen() {
 
   const handleContact = () => {
     const supportWhatsApp = (process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ?? "").replace(
-      /\\D/g,
+      /\D/g,
       ""
     );
 
@@ -192,11 +201,24 @@ export default function PropertyDetailScreen() {
     );
   }
 
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${
-    property.longitude - 0.003
-  }%2C${property.latitude - 0.003}%2C${property.longitude + 0.003}%2C${
-    property.latitude + 0.003
-  }&layer=mapnik&marker=${property.latitude}%2C${property.longitude}`;
+  const latitude = property.latitude;
+  const longitude = property.longitude;
+  const hasCoordinates =
+    typeof latitude === "number" &&
+    Number.isFinite(latitude) &&
+    typeof longitude === "number" &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180;
+  const mapUrl = hasCoordinates
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${
+        longitude - 0.003
+      }%2C${latitude - 0.003}%2C${longitude + 0.003}%2C${
+        latitude + 0.003
+      }&layer=mapnik&marker=${latitude}%2C${longitude}`
+    : null;
 
   const isLongDesc = property.description.length > 150;
   const displayDesc =
@@ -314,7 +336,7 @@ export default function PropertyDetailScreen() {
             {property.title}
           </Text>
           <Text className="text-blue-600 text-xl font-bold mb-4">
-            {formatPrice(property.price)}
+            {formatPrice(property.price)}{property.listing_kind === "pg" ? " / month" : ""}
           </Text>
 
           {/* Specs Row */}
@@ -332,9 +354,9 @@ export default function PropertyDetailScreen() {
             <SpecItem
               icon="expand-outline"
               label="Area"
-              value={`${property.area_sqft} ft²`}
+              value={property.area_sqft !== null ? `${property.area_sqft} ft²` : "Not listed"}
             />
-            <SpecItem icon="home-outline" label="Type" value={property.type} />
+            <SpecItem icon="home-outline" label="Type" value={formatListingType(property.type)} />
           </View>
 
           {/* Description */}
@@ -370,35 +392,43 @@ export default function PropertyDetailScreen() {
           </View>
 
           {/* Map Preview */}
-          <TouchableOpacity
-            onPress={() => {
-              router.push({
-                pathname: "/(root)/property/map",
-                params: {
-                  latitude: property.latitude,
-                  longitude: property.longitude,
-                  title: property.title,
-                  address: `${property.address}, ${property.city}`,
-                },
-              });
-            }}
-            activeOpacity={0.9}
-            className="rounded-2xl overflow-hidden mb-6"
-            style={{ height: 200 }}
-          >
-            <WebView
-              source={{ uri: mapUrl }}
-              style={{ flex: 1 }}
-              scrollEnabled={false}
-              pointerEvents="none"
-            />
-            <View className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 rounded-full flex-row items-center gap-1">
-              <Ionicons name="expand-outline" size={12} color="#374151" />
-              <Text className="text-gray-600 text-xs font-medium">
-                Tap to expand
+          {mapUrl ? (
+            <TouchableOpacity
+              onPress={() => {
+                router.push({
+                  pathname: "/(root)/property/map",
+                  params: {
+                    latitude: String(latitude),
+                    longitude: String(longitude),
+                    title: property.title,
+                    address: `${property.address}, ${property.city}`,
+                  },
+                });
+              }}
+              activeOpacity={0.9}
+              className="rounded-2xl overflow-hidden mb-6"
+              style={{ height: 200 }}
+            >
+              <WebView
+                source={{ uri: mapUrl }}
+                style={{ flex: 1 }}
+                scrollEnabled={false}
+                pointerEvents="none"
+              />
+              <View className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 rounded-full flex-row items-center gap-1">
+                <Ionicons name="expand-outline" size={12} color="#374151" />
+                <Text className="text-gray-600 text-xs font-medium">
+                  Tap to expand
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <View className="rounded-2xl bg-gray-50 border border-gray-100 p-4 mb-6">
+              <Text className="text-sm text-gray-500">
+                Map location has not been added for this listing yet.
               </Text>
             </View>
-          </TouchableOpacity>
+          )}
 
           {/* Contact Button */}
           <TouchableOpacity
