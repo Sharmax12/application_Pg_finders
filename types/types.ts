@@ -1,9 +1,14 @@
 export const PROPERTY_COLUMNS =
-  "id,title,description,listing_kind,price,type,bedrooms,bathrooms,area_sqft,address,city,latitude,longitude,images,is_featured,is_sold,created_at";
+  "id,title,description,listing_kind,price,deposit_amount,food_available,gender_preference,amenities,house_rules,type,bedrooms,bathrooms,area_sqft,address,city,latitude,longitude,images,is_featured,is_sold,created_at";
 
 export interface Property {
   id: string;
   listing_kind: "pg" | "legacy";
+  deposit_amount: number | null;
+  food_available: boolean | null;
+  gender_preference: "any" | "male" | "female";
+  amenities: string[];
+  house_rules: string;
   title: string;
   description: string;
   price: number;
