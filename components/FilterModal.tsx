@@ -1,6 +1,7 @@
 import {
   View,
   Text,
+  Alert,
   Modal,
   TouchableOpacity,
   ScrollView,
@@ -91,8 +92,24 @@ export default function FilterModal({
   ).length;
 
   const handleApply = () => {
-    setMinPrice(localMin ? Number(localMin) : null);
-    setMaxPrice(localMax ? Number(localMax) : null);
+    const parsedMin = localMin.trim() ? Number(localMin) : null;
+    const parsedMax = localMax.trim() ? Number(localMax) : null;
+
+    if (
+      (parsedMin !== null && (!Number.isFinite(parsedMin) || parsedMin < 0)) ||
+      (parsedMax !== null && (!Number.isFinite(parsedMax) || parsedMax < 0))
+    ) {
+      Alert.alert("Invalid rent range", "Enter valid, non-negative monthly rent amounts.");
+      return;
+    }
+
+    if (parsedMin !== null && parsedMax !== null && parsedMax < parsedMin) {
+      Alert.alert("Invalid rent range", "Maximum monthly rent must be greater than or equal to minimum rent.");
+      return;
+    }
+
+    setMinPrice(parsedMin);
+    setMaxPrice(parsedMax);
     onClose();
   };
 
