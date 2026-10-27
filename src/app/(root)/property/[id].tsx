@@ -139,7 +139,7 @@ export default function PropertyDetailScreen() {
 
   const handleContact = () => {
     const supportWhatsApp = (process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ?? "").replace(
-      /\\D/g,
+      /\D/g,
       ""
     );
 
@@ -192,17 +192,26 @@ export default function PropertyDetailScreen() {
     );
   }
 
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${
-    property.longitude - 0.003
-  }%2C${property.latitude - 0.003}%2C${property.longitude + 0.003}%2C${
-    property.latitude + 0.003
-  }&layer=mapnik&marker=${property.latitude}%2C${property.longitude}`;
+  const safeImages = Array.isArray(property.images)
+    ? property.images.filter((uri) => typeof uri === "string" && uri.length > 0)
+    : [];
+  const description = typeof property.description === "string" ? property.description : "";
+  const hasCoordinates =
+    Number.isFinite(property.latitude) &&
+    Number.isFinite(property.longitude) &&
+    property.latitude >= -90 &&
+    property.latitude <= 90 &&
+    property.longitude >= -180 &&
+    property.longitude <= 180;
+  const mapUrl = hasCoordinates
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${property.longitude - 0.003
+      }%2C${property.latitude - 0.003}%2C${property.longitude + 0.003}%2C${property.latitude + 0.003
+      }&layer=mapnik&marker=${property.latitude}%2C${property.longitude}`
+    : null;
 
-  const isLongDesc = property.description.length > 150;
+  const isLongDesc = description.length > 150;
   const displayDesc =
-    expanded || !isLongDesc
-      ? property.description
-      : property.description.slice(0, 150) + "...";
+    expanded || !isLongDesc ? description : description.slice(0, 150) + "...";
 
   return (
     <View className="flex-1 bg-white">
@@ -211,7 +220,7 @@ export default function PropertyDetailScreen() {
         <View>
           <View style={{ opacity: property.is_sold ? 0.5 : 1 }}>
             <FlatList
-              data={property.images}
+              data={safeImages}
               keyExtractor={(_, i) => i.toString()}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -237,7 +246,7 @@ export default function PropertyDetailScreen() {
           {/* Image count badge */}
           <View className="absolute bottom-3 right-4 bg-black/50 px-3 py-1 rounded-full">
             <Text className="text-white text-xs font-medium">
-              {activeIndex + 1}/{property.images.length}
+              {activeIndex + 1}/{safeImages.length}
             </Text>
           </View>
 
@@ -332,7 +341,7 @@ export default function PropertyDetailScreen() {
             <SpecItem
               icon="expand-outline"
               label="Area"
-              value={`${property.area_sqft} ft²`}
+              value={typeof property.area_sqft === "number" && property.area_sqft > 0 ? `${property.area_sqft} ft²` : "—"}
             />
             <SpecItem icon="home-outline" label="Type" value={property.type} />
           </View>
@@ -370,35 +379,42 @@ export default function PropertyDetailScreen() {
           </View>
 
           {/* Map Preview */}
-          <TouchableOpacity
-            onPress={() => {
-              router.push({
-                pathname: "/(root)/property/map",
-                params: {
-                  latitude: property.latitude,
-                  longitude: property.longitude,
-                  title: property.title,
-                  address: `${property.address}, ${property.city}`,
-                },
-              });
-            }}
-            activeOpacity={0.9}
-            className="rounded-2xl overflow-hidden mb-6"
-            style={{ height: 200 }}
-          >
-            <WebView
-              source={{ uri: mapUrl }}
-              style={{ flex: 1 }}
-              scrollEnabled={false}
-              pointerEvents="none"
-            />
-            <View className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 rounded-full flex-row items-center gap-1">
-              <Ionicons name="expand-outline" size={12} color="#374151" />
-              <Text className="text-gray-600 text-xs font-medium">
-                Tap to expand
+          {hasCoordinates && mapUrl ? (
+            <TouchableOpacity
+              onPress={() => {
+                router.push({
+                  pathname: "/(root)/property/map",
+                  params: {
+                    latitude: String(property.latitude),
+                    longitude: String(property.longitude),
+                    title: property.title,
+                    address: `${property.address}, ${property.city}`,
+                  },
+                });
+              }}
+              activeOpacity={0.9}
+              className="rounded-2xl overflow-hidden mb-6"
+              style={{ height: 200 }}
+            >
+              <WebView
+                source={{ uri: mapUrl }}
+                style={{ flex: 1 }}
+                scrollEnabled={false}
+                pointerEvents="none"
+              />
+              <View className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 rounded-full flex-row items-center gap-1">
+                <Ionicons name="expand-outline" size={12} color="#374151" />
+                <Text className="text-gray-600 text-xs font-medium">Tap to expand</Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <View className="rounded-2xl bg-gray-50 items-center justify-center mb-6 px-5" style={{ height: 120 }}>
+              <Ionicons name="location-outline" size={24} color="#9CA3AF" />
+              <Text className="mt-2 text-center text-sm text-gray-500">
+                Map coordinates have not been added to this listing.
               </Text>
             </View>
-          </TouchableOpacity>
+          )}
 
           {/* Contact Button */}
           <TouchableOpacity
@@ -443,8 +459,8 @@ export default function PropertyDetailScreen() {
 
       {/* Image Viewer */}
       <ImageViewer
-        images={property.images.map((uri) => ({ uri }))}
-        imageIndex={activeIndex}
+        images={safeImages.map((uri) => ({ uri }))}
+        imageIndex={Math.min(activeIndex, Math.max(0, safeImages.length - 1))}
         visible={imageViewerVisible}
         onRequestClose={() => {
           setImageViewerVisible(false);
