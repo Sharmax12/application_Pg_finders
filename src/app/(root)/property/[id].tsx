@@ -146,7 +146,7 @@ export default function PropertyDetailScreen() {
   };
 
   const handleMarkSold = () => {
-    Alert.alert("Mark as Sold", "Are you sure?", [
+    Alert.alert("Mark as unavailable", "Remove this PG from available listings?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Mark Sold",
@@ -372,7 +372,7 @@ export default function PropertyDetailScreen() {
             )}
             {property.is_sold && (
               <View className="bg-red-50 px-3 py-1 rounded-full">
-                <Text className="text-red-500 text-xs font-semibold">Sold</Text>
+                <Text className="text-red-500 text-xs font-semibold">Unavailable</Text>
               </View>
             )}
           </View>
