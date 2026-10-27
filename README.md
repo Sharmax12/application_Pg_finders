@@ -4,7 +4,7 @@
 
 PGFinders is a mobile-first product designed to make finding and comparing paying-guest (PG) accommodation easier for students and young professionals. The goal is to bring important information—such as rent, location, amenities, food options, and house rules—into one place so people can make better-informed decisions.
 
-> **Project Status:** Active development. This repository provides the Expo/React Native app foundation and Clerk authentication routing. PG discovery, listing management, filters, and other product capabilities remain planned until their implementation is complete.
+> **Project Status:** Active development. The app includes Clerk sign-in, PG listing discovery, monthly rent and deposit details, room/sharing types, food and amenities, house rules, owner/manager WhatsApp contacts, search filters, saved listings, and admin-only listing publishing. Supabase schema and policies must be migrated before deploying these features. Notifications and verified direct owner enquiries remain future work.
 
 ---
 
@@ -16,8 +16,8 @@ PGFinders aims to make accommodation discovery more structured, transparent, and
 
 ### Planned Features
 
-- 🏠 **Discover PGs** — Browse available accommodation listings.
-- 💰 **Transparent Pricing** — Compare rent, deposits, and additional charges.
+- 🏠 **Discover PGs** — Browse available room and hostel listings with monthly rents.
+- 💰 **Transparent Pricing** — Compare monthly rent, security deposits, food availability, amenities, and house rules where provided.
 - 🔎 **Smart Search & Filters** — Search by location, budget, room type, and preferences.
 - 🍽️ **Food & Amenities** — Review food arrangements, facilities, and house rules.
 - 📍 **Location-Based Discovery** — Explore accommodation options near colleges and workplaces.
@@ -65,6 +65,41 @@ application_Pg_finders/
 Some folders and responsibilities may evolve as development progresses.
 
 ---
+
+## Supabase schema and security setup
+
+Before running the updated app against Supabase, apply
+`supabase/migrations/20261027000000_pg_listing_and_admin_policies.sql`
+to the same project configured in the app. Review the migration first and use your
+normal migration workflow (for example, link the correct Supabase project and run
+`supabase db push`). Configure Clerk as Supabase's **native third-party auth
+provider** so Clerk session tokens are accepted by the Data API and include the
+`authenticated` role. The migration separates legacy sale-property rows from PG
+listings, adds monthly-rent/deposit/food/amenity/house-rule/owner-contact fields,
+and enforces admin-only property writes. It also limits each Clerk user's app-user
+row to self read and insert, and each saved listing to its owner, blocking
+client-side changes to `is_admin` or another user's saved list.
+
+Create the first admin only after that account has signed in and its row exists in
+`public.users`. Use a trusted Supabase SQL Editor session, replacing the Clerk user
+ID with the verified ID from Clerk:
+
+```sql
+update public.users
+set is_admin = true
+where clerk_id = 'user_replace_with_verified_clerk_id';
+```
+
+Sign out and sign back in after assigning admin status so the app re-fetches the role.
+
+Never expose the Supabase service-role/secret key in the app. Verify the policies
+against the live Supabase project and test non-admin writes before production; this
+repository migration is not applied automatically to your hosted project.
+
+The CI workflow refreshes stale npm lock metadata before the clean install and
+commits the refreshed lockfile on same-repository branches. Run
+`npm install --package-lock-only` and review `package-lock.json` whenever
+dependencies change locally.
 
 ## ⚙️ Getting Started
 

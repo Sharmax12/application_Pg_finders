@@ -4,7 +4,7 @@ import ImageViewer from "../../../../components/ImageViewer";
 import { formatPrice } from "../../../../lib/utils";
 import { supabase } from "../../../../lib/superbase";
 import { useUserStore } from "../../../../store/userStore";
-import { PROPERTY_COLUMNS, type Property } from "../../../../types/types";
+import { formatListingType, PROPERTY_COLUMNS, type Property } from "../../../../types/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -50,6 +50,7 @@ export default function PropertyDetailScreen() {
           .from("properties")
           .select(PROPERTY_COLUMNS)
           .eq("id", id)
+          .eq("listing_kind", "pg")
           .single();
 
         if (error) {
@@ -57,7 +58,27 @@ export default function PropertyDetailScreen() {
         }
 
         if (isCurrent) {
-          setProperty(data);
+          setProperty({
+            ...data,
+            description: typeof data.description === "string" ? data.description : "",
+            images: Array.isArray(data.images)
+              ? data.images.filter(
+                  (image: unknown): image is string =>
+                    typeof image === "string" && image.length > 0
+                )
+              : [],
+            amenities: Array.isArray(data.amenities)
+              ? data.amenities.filter(
+                  (amenity: unknown): amenity is string =>
+                    typeof amenity === "string" && amenity.length > 0
+                )
+              : [],
+            house_rules: typeof data.house_rules === "string" ? data.house_rules : "",
+            gender_preference:
+              data.gender_preference === "male" || data.gender_preference === "female"
+                ? data.gender_preference
+                : "any",
+          });
         }
       } catch (fetchError) {
         console.error("Failed to fetch property details:", fetchError);
@@ -126,7 +147,7 @@ export default function PropertyDetailScreen() {
   };
 
   const handleMarkSold = () => {
-    Alert.alert("Mark as Sold", "Are you sure?", [
+    Alert.alert("Mark as unavailable", "Remove this PG from available listings?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Mark Sold",
@@ -137,25 +158,63 @@ export default function PropertyDetailScreen() {
     ]);
   };
 
-  const handleContact = () => {
-    const supportWhatsApp = (process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ?? "").replace(
-      /\\D/g,
-      ""
-    );
+  const togglePropertyFeatured = async () => {
+    const nextFeatured = !property?.is_featured;
+    try {
+      const { error } = await authSupabase
+        .from("properties")
+        .update({ is_featured: nextFeatured })
+        .eq("id", id);
 
-    // Do not route users to a placeholder number. This is a global PGFinders
-    // support contact, not a verified per-listing owner number.
-    if (supportWhatsApp.length < 10 || supportWhatsApp.length > 15) {
+      if (error) throw error;
+      setProperty((prev) =>
+        prev ? { ...prev, is_featured: nextFeatured } : prev
+      );
+    } catch (updateError) {
+      console.error("Failed to update featured status:", updateError);
+      Alert.alert("Unable to update featured status", "Please try again.");
+    }
+  };
+
+  const handleToggleFeatured = () => {
+    const nextFeatured = !property?.is_featured;
+    Alert.alert(
+      nextFeatured ? "Feature PG Listing" : "Remove Featured Status",
+      nextFeatured
+        ? "This PG will appear in the featured section."
+        : "This PG will no longer appear in the featured section.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: nextFeatured ? "Feature Listing" : "Unfeature Listing",
+          onPress: () => void togglePropertyFeatured(),
+        },
+      ]
+    );
+  };
+
+  const handleContact = () => {
+    const contactNumber = (
+      property?.owner_whatsapp ??
+      process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ??
+      ""
+    ).replace(/\D/g, "");
+
+    // Prefer the contact entered for this listing. The global support number
+    // is only a fallback and is not represented as a verified owner contact.
+    if (contactNumber.length < 10 || contactNumber.length > 15) {
       Alert.alert(
         "Contact not available yet",
-        "The PGFinders contact number has not been configured. Please try again later."
+        "No contact number is configured for this listing or PGFinders support yet."
       );
       return;
     }
 
     const listingTitle = property?.title ?? "a PG listing";
-    const message = `Hi PGFinders team, I'm interested in "${listingTitle}". Could you connect me with the owner or manager?`;
-    const url = `https://wa.me/${supportWhatsApp}?text=${encodeURIComponent(
+    const message = property?.owner_whatsapp
+      ? `Hi, I'm interested in "${listingTitle}". Is it still available? Could you share the rent and visiting details?`
+      : `Hi PGFinders team, I'm interested in "${listingTitle}". Could you connect me with the owner or manager?`;
+    const url = `https://wa.me/${contactNumber}?text=${encodeURIComponent(
       message
     )}`;
     void Linking.openURL(url).catch((error) => {
@@ -192,11 +251,24 @@ export default function PropertyDetailScreen() {
     );
   }
 
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${
-    property.longitude - 0.003
-  }%2C${property.latitude - 0.003}%2C${property.longitude + 0.003}%2C${
-    property.latitude + 0.003
-  }&layer=mapnik&marker=${property.latitude}%2C${property.longitude}`;
+  const latitude = property.latitude;
+  const longitude = property.longitude;
+  const hasCoordinates =
+    typeof latitude === "number" &&
+    Number.isFinite(latitude) &&
+    typeof longitude === "number" &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180;
+  const mapUrl = hasCoordinates
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${
+        longitude - 0.003
+      }%2C${latitude - 0.003}%2C${longitude + 0.003}%2C${
+        latitude + 0.003
+      }&layer=mapnik&marker=${latitude}%2C${longitude}`
+    : null;
 
   const isLongDesc = property.description.length > 150;
   const displayDesc =
@@ -210,36 +282,50 @@ export default function PropertyDetailScreen() {
         {/* Image Carousel */}
         <View>
           <View style={{ opacity: property.is_sold ? 0.5 : 1 }}>
-            <FlatList
-              data={property.images}
-              keyExtractor={(_, i) => i.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => {
-                    setImageViewerVisible(true);
-                  }}
-                >
-                  <Image
-                    source={{ uri: item }}
-                    style={{ width, height: 300 }}
-                    resizeMode="cover"
-                  />
-                </TouchableOpacity>
-              )}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={onScroll}
-              scrollEventThrottle={16}
-            />
+            {property.images.length > 0 ? (
+              <FlatList
+                data={property.images}
+                keyExtractor={(_, i) => i.toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="View listing photo full screen"
+                    onPress={() => setImageViewerVisible(true)}
+                  >
+                    <Image
+                      source={{ uri: item }}
+                      style={{ width, height: 300 }}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                )}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+              />
+            ) : (
+              <View
+                style={{ width, height: 300 }}
+                className="bg-gray-100 items-center justify-center"
+              >
+                <Ionicons name="image-outline" size={38} color="#9CA3AF" />
+                <Text className="text-sm text-gray-500 mt-3">
+                  No photos have been added to this PG yet.
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Image count badge */}
-          <View className="absolute bottom-3 right-4 bg-black/50 px-3 py-1 rounded-full">
-            <Text className="text-white text-xs font-medium">
-              {activeIndex + 1}/{property.images.length}
-            </Text>
-          </View>
+          {property.images.length > 0 && (
+            <View className="absolute bottom-3 right-4 bg-black/50 px-3 py-1 rounded-full">
+              <Text className="text-white text-xs font-medium">
+                {activeIndex + 1}/{property.images.length}
+              </Text>
+            </View>
+          )}
 
           {/* Dot indicators */}
           {property.images.length > 1 && (
@@ -292,7 +378,7 @@ export default function PropertyDetailScreen() {
           <View className="flex-row gap-2 mb-3 flex-wrap">
             <View className="bg-blue-50 px-3 py-1 rounded-full">
               <Text className="text-blue-600 text-xs font-semibold capitalize">
-                {property.type}
+                {formatListingType(property.type)}
               </Text>
             </View>
             {property.is_featured && (
@@ -304,7 +390,7 @@ export default function PropertyDetailScreen() {
             )}
             {property.is_sold && (
               <View className="bg-red-50 px-3 py-1 rounded-full">
-                <Text className="text-red-500 text-xs font-semibold">Sold</Text>
+                <Text className="text-red-500 text-xs font-semibold">Unavailable</Text>
               </View>
             )}
           </View>
@@ -314,7 +400,7 @@ export default function PropertyDetailScreen() {
             {property.title}
           </Text>
           <Text className="text-blue-600 text-xl font-bold mb-4">
-            {formatPrice(property.price)}
+            {formatPrice(property.price)}{property.listing_kind === "pg" ? " / month" : ""}
           </Text>
 
           {/* Specs Row */}
@@ -332,9 +418,62 @@ export default function PropertyDetailScreen() {
             <SpecItem
               icon="expand-outline"
               label="Area"
-              value={`${property.area_sqft} ft²`}
+              value={property.area_sqft !== null ? `${property.area_sqft} ft²` : "Not listed"}
             />
-            <SpecItem icon="home-outline" label="Type" value={property.type} />
+            <SpecItem icon="home-outline" label="Type" value={formatListingType(property.type)} />
+          </View>
+
+          <View className="rounded-2xl bg-gray-50 border border-gray-100 p-4 mb-6">
+            <View className="flex-row flex-wrap gap-y-4">
+              <View className="w-1/2 pr-3">
+                <Text className="text-xs text-gray-500 mb-1">Security deposit</Text>
+                <Text className="text-gray-900 font-bold">
+                  {property.deposit_amount !== null
+                    ? formatPrice(property.deposit_amount)
+                    : "Not listed"}
+                </Text>
+              </View>
+              <View className="w-1/2">
+                <Text className="text-xs text-gray-500 mb-1">Food</Text>
+                <Text className="text-gray-900 font-bold">
+                  {property.food_available === null
+                    ? "Not specified"
+                    : property.food_available
+                    ? "Included"
+                    : "Not included"}
+                </Text>
+              </View>
+              <View className="w-1/2 pr-3">
+                <Text className="text-xs text-gray-500 mb-1">Accommodation preference</Text>
+                <Text className="text-gray-900 font-bold">
+                  {property.gender_preference === "any"
+                    ? "Any"
+                    : property.gender_preference === "male"
+                    ? "Men"
+                    : "Women"}
+                </Text>
+              </View>
+            </View>
+
+            {property.amenities.length > 0 && (
+              <View className="mt-4">
+                <Text className="text-sm font-bold text-gray-900 mb-2">Amenities</Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {property.amenities.map((amenity) => (
+                    <View key={amenity} className="rounded-full bg-white border border-gray-200 px-3 py-1.5">
+                      <Text className="text-xs text-gray-700">{amenity}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {property.house_rules.trim().length > 0 && (
+              <View className="mt-4">
+                <Text className="text-sm font-bold text-gray-900 mb-1">House rules</Text>
+                <Text className="text-sm text-gray-600 leading-5">{property.house_rules}</Text>
+              </View>
+            )}
           </View>
 
           {/* Description */}
@@ -370,35 +509,43 @@ export default function PropertyDetailScreen() {
           </View>
 
           {/* Map Preview */}
-          <TouchableOpacity
-            onPress={() => {
-              router.push({
-                pathname: "/(root)/property/map",
-                params: {
-                  latitude: property.latitude,
-                  longitude: property.longitude,
-                  title: property.title,
-                  address: `${property.address}, ${property.city}`,
-                },
-              });
-            }}
-            activeOpacity={0.9}
-            className="rounded-2xl overflow-hidden mb-6"
-            style={{ height: 200 }}
-          >
-            <WebView
-              source={{ uri: mapUrl }}
-              style={{ flex: 1 }}
-              scrollEnabled={false}
-              pointerEvents="none"
-            />
-            <View className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 rounded-full flex-row items-center gap-1">
-              <Ionicons name="expand-outline" size={12} color="#374151" />
-              <Text className="text-gray-600 text-xs font-medium">
-                Tap to expand
+          {mapUrl ? (
+            <TouchableOpacity
+              onPress={() => {
+                router.push({
+                  pathname: "/(root)/property/map",
+                  params: {
+                    latitude: String(latitude),
+                    longitude: String(longitude),
+                    title: property.title,
+                    address: `${property.address}, ${property.city}`,
+                  },
+                });
+              }}
+              activeOpacity={0.9}
+              className="rounded-2xl overflow-hidden mb-6"
+              style={{ height: 200 }}
+            >
+              <WebView
+                source={{ uri: mapUrl }}
+                style={{ flex: 1 }}
+                scrollEnabled={false}
+                pointerEvents="none"
+              />
+              <View className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 rounded-full flex-row items-center gap-1">
+                <Ionicons name="expand-outline" size={12} color="#374151" />
+                <Text className="text-gray-600 text-xs font-medium">
+                  Tap to expand
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <View className="rounded-2xl bg-gray-50 border border-gray-100 p-4 mb-6">
+              <Text className="text-sm text-gray-500">
+                Map location has not been added for this listing yet.
               </Text>
             </View>
-          </TouchableOpacity>
+          )}
 
           {/* Contact Button */}
           <TouchableOpacity
@@ -407,13 +554,26 @@ export default function PropertyDetailScreen() {
           >
             <Ionicons name="logo-whatsapp" size={20} color="white" />
             <Text className="text-white font-bold text-base">
-              Contact PGFinders
+              {property.owner_whatsapp ? "Contact Owner / Manager" : "Contact PGFinders"}
             </Text>
           </TouchableOpacity>
 
           {/* Admin Actions */}
           {isAdmin && (
-            <View className="flex-row gap-3">
+            <View className="flex-row flex-wrap gap-3">
+              <TouchableOpacity
+                onPress={handleToggleFeatured}
+                className="flex-1 flex-row items-center justify-center gap-2 bg-blue-50 py-4 rounded-2xl border border-blue-200"
+              >
+                <Ionicons
+                  name={property.is_featured ? "star" : "star-outline"}
+                  size={18}
+                  color="#2563EB"
+                />
+                <Text className="text-blue-700 font-semibold">
+                  {property.is_featured ? "Unfeature" : "Feature PG"}
+                </Text>
+              </TouchableOpacity>
               {!property.is_sold && (
                 <TouchableOpacity
                   onPress={handleMarkSold}
@@ -425,7 +585,7 @@ export default function PropertyDetailScreen() {
                     color="#D97706"
                   />
                   <Text className="text-amber-600 font-semibold">
-                    Mark Sold
+                    Mark Unavailable
                   </Text>
                 </TouchableOpacity>
               )}
@@ -442,14 +602,16 @@ export default function PropertyDetailScreen() {
       </ScrollView>
 
       {/* Image Viewer */}
-      <ImageViewer
-        images={property.images.map((uri) => ({ uri }))}
-        imageIndex={activeIndex}
-        visible={imageViewerVisible}
-        onRequestClose={() => {
-          setImageViewerVisible(false);
-        }}
-      />
+      {property.images.length > 0 && (
+        <ImageViewer
+          images={property.images.map((uri) => ({ uri }))}
+          imageIndex={activeIndex}
+          visible={imageViewerVisible}
+          onRequestClose={() => {
+            setImageViewerVisible(false);
+          }}
+        />
+      )}
     </View>
   );
 }

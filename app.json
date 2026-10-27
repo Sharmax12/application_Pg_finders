@@ -8,9 +8,11 @@
     "scheme": "pgfinders",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.pgfinders.app",
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.pgfinders.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -25,6 +27,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to select PG listing and profile photos."
+        }
+      ],
       [
         "expo-location",
         {

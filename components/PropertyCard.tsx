@@ -85,11 +85,11 @@ export default function PropertyCard({
 
           <View className="flex-row items-center justify-between">
             <Text className="text-blue-600 font-bold text-sm">
-              {formatPrice(property.price)}
+              {formatPrice(property.price)}{property.listing_kind === "pg" ? "/mo" : ""}
             </Text>
             {property.is_sold && (
               <View className="bg-red-50 px-2 py-0.5 rounded-full">
-                <Text className="text-red-500 text-xs font-semibold">Sold</Text>
+                <Text className="text-red-500 text-xs font-semibold">Unavailable</Text>
               </View>
             )}
             <View className="flex-row gap-3">
@@ -102,7 +102,7 @@ export default function PropertyCard({
               <View className="flex-row items-center gap-1">
                 <Ionicons name="expand-outline" size={11} color="#6B7280" />
                 <Text className="text-xs text-gray-500">
-                  {property.area_sqft} ft²
+                  {property.area_sqft !== null ? `${property.area_sqft} ft²` : "Area not listed"}
                 </Text>
               </View>
             </View>

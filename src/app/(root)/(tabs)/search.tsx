@@ -69,15 +69,20 @@ export default function SearchScreen() {
 
     const fetchResults = async () => {
       try {
-        let query = supabase.from("properties").select(PROPERTY_COLUMNS);
+        let query = supabase
+          .from("properties")
+          .select(PROPERTY_COLUMNS)
+          .eq("listing_kind", "pg")
+          .eq("is_sold", false);
 
         if (request.search) {
-          const escapedSearch = request.search
-            .replace(/\\/g, "\\\\")
-            .replace(/"/g, '\\"');
-          query = query.or(
-            `title.ilike."%${escapedSearch}%",city.ilike."%${escapedSearch}%"`
-          );
+          // Treat user input as literal search text, not PostgREST filter syntax.
+          const safeSearch = request.search.replace(/[\\\\,()%"]/g, " ").trim();
+          if (safeSearch) {
+            query = query.or(
+              `title.ilike."%${safeSearch}%",city.ilike."%${safeSearch}%"`
+            );
+          }
         }
 
         if (request.type) {
@@ -138,7 +143,7 @@ export default function SearchScreen() {
       {/* Header */}
       <View className="px-5 pt-4 pb-3">
         <Text className="text-2xl font-bold text-gray-900 mb-4">
-          Find Property
+          Find a PG
         </Text>
 
         {/* Search Bar + Filter Button */}
@@ -272,7 +277,7 @@ export default function SearchScreen() {
         renderItem={({ item }) => <PropertyCard property={item} />}
         ListHeaderComponent={
           <Text className="text-sm text-gray-400 mb-4">
-            {loading ? "Searching..." : `${results.length} properties found`}
+            {loading ? "Searching..." : `${results.length} PGs found`}
           </Text>
         }
         ListEmptyComponent={
@@ -294,7 +299,7 @@ export default function SearchScreen() {
                 <>
                   <Ionicons name="search-outline" size={48} color="#D1D5DB" />
                   <Text className="text-gray-400 mt-4 text-base">
-                    No properties found
+                    No PG listings found
                   </Text>
                   <Text className="text-gray-300 text-sm mt-1">
                     Try a different search or adjust filters

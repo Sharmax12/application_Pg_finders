@@ -1,9 +1,11 @@
 import { useSuperbase } from "../../../../hooks/useSuperbase";
+import { useUser } from "@clerk/expo";
+import { useUserStore } from "../../../../store/userStore";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { Redirect, useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +20,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const TYPES = ["apartment", "house", "villa", "studio"] as const;
+const TYPES = ["single_room", "double_sharing", "triple_sharing", "private_room", "hostel"] as const;
+const TYPE_LABELS: Record<PropertyType, string> = {
+  single_room: "Single Room",
+  double_sharing: "Double Sharing",
+  triple_sharing: "Triple Sharing",
+  private_room: "Private Room",
+  hostel: "Hostel",
+};
 type PropertyType = (typeof TYPES)[number];
 
 const MIN_PRICE = 1;
@@ -29,10 +38,49 @@ const inputClass =
 const labelClass = "text-sm font-semibold text-gray-700 mb-1.5";
 const sectionClass = "mb-5";
 
+function Counter({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <View className="flex-1">
+      <Text className={labelClass}>{label}</Text>
+      <View className="flex-row items-center bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <TouchableOpacity
+          onPress={() => onChange(Math.max(1, value - 1))}
+          className="w-11 h-11 items-center justify-center"
+        >
+          <Ionicons name="remove" size={18} color="#374151" />
+        </TouchableOpacity>
+        <Text className="flex-1 text-center text-gray-800 font-bold text-base">
+          {value}
+        </Text>
+        <TouchableOpacity
+          onPress={() => onChange(value + 1)}
+          className="w-11 h-11 items-center justify-center"
+        >
+          <Ionicons name="add" size={18} color="#374151" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 interface FormState {
   title: string;
   description: string;
+  ownerWhatsapp: string;
   price: string;
+  depositAmount: string;
+  foodAvailable: boolean;
+  genderPreference: "any" | "male" | "female";
+  amenitiesText: string;
+  houseRules: string;
   type: PropertyType;
   bedrooms: number;
   bathrooms: number;
@@ -41,7 +89,6 @@ interface FormState {
   city: string;
   latitude: string;
   longitude: string;
-  isFeatured: boolean;
   images: string[];
   localImages: string[];
 }
@@ -49,8 +96,14 @@ interface FormState {
 const INITIAL_FORM: FormState = {
   title: "",
   description: "",
+  ownerWhatsapp: "",
   price: "",
-  type: "apartment",
+  depositAmount: "",
+  foodAvailable: false,
+  genderPreference: "any",
+  amenitiesText: "",
+  houseRules: "",
+  type: "single_room",
   bedrooms: 1,
   bathrooms: 1,
   areaSqft: "",
@@ -58,7 +111,6 @@ const INITIAL_FORM: FormState = {
   city: "",
   latitude: "",
   longitude: "",
-  isFeatured: false,
   images: [],
   localImages: [],
 };
@@ -66,8 +118,32 @@ const INITIAL_FORM: FormState = {
 export default function CreatePropertyScreen() {
   const router = useRouter();
   const authSupabase = useSuperbase();
+  const { user } = useUser();
+  const isAdmin = useUserStore((state) => state.isAdmin);
+  const isAdminLoaded = useUserStore((state) => state.isAdminLoaded);
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  const uploadedStoragePathsRef = useRef<string[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        const paths = [...uploadedStoragePathsRef.current];
+        uploadedStoragePathsRef.current = [];
+        if (paths.length > 0) {
+          void authSupabase.storage
+            .from("property-images")
+            .remove(paths)
+            .then(({ error }) => {
+              if (error) console.warn("Could not clean up abandoned PG photos:", error);
+            })
+            .catch((error) => {
+              console.warn("Could not clean up abandoned PG photos:", error);
+            });
+        }
+      };
+    }, [authSupabase])
+  );
 
   // Loading states
   const [submitting, setSubmitting] = useState(false);
@@ -79,6 +155,16 @@ export default function CreatePropertyScreen() {
 
   // ─── Image Picker ──────────────────────────────────────────
   const handlePickImages = async () => {
+    const remaining = 6 - form.images.length;
+    if (remaining <= 0) {
+      Alert.alert("Photo limit reached", "A PG listing can have at most 6 photos.");
+      return;
+    }
+    if (!user?.id) {
+      Alert.alert("Sign in required", "Please sign in again before uploading photos.");
+      return;
+    }
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(
@@ -93,7 +179,7 @@ export default function CreatePropertyScreen() {
       allowsMultipleSelection: true,
       quality: 0.7,
       base64: true,
-      selectionLimit: 6,
+      selectionLimit: remaining,
     });
 
     if (result.canceled) return;
@@ -103,44 +189,61 @@ export default function CreatePropertyScreen() {
     const uploadedUrls: string[] = [];
     const previewUris: string[] = [];
 
-    for (const asset of result.assets) {
-      try {
-        const filename = `property_${Date.now()}_${Math.random()
-          .toString(36)
-          .slice(2)}.jpg`;
+    try {
+      for (const asset of result.assets.slice(0, remaining)) {
+        try {
+          const mimeType = asset.mimeType || "image/jpeg";
+          const extension = mimeType.split("/")[1]?.replace("jpeg", "jpg") || "jpg";
+          const filename = `${user.id}/property_${Date.now()}_${Math.random().toString(36).slice(2)}.${extension}`;
 
-        const base64 = asset.base64!;
-        const buffer = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+          if (!asset.base64) {
+            throw new Error("The selected image could not be read. Please choose another photo.");
+          }
 
-        const { error } = await authSupabase.storage
-          .from("property-images")
-          .upload(filename, buffer, {
-            contentType: "image/jpeg",
-            upsert: false,
-          });
+          const buffer = Uint8Array.from(atob(asset.base64), (c) => c.charCodeAt(0));
+          const { error } = await authSupabase.storage
+            .from("property-images")
+            .upload(filename, buffer, { contentType: mimeType, upsert: false });
+          if (error) throw error;
 
-        if (error) throw error;
+          const { data: urlData } = authSupabase.storage
+            .from("property-images")
+            .getPublicUrl(filename);
+          uploadedUrls.push(urlData.publicUrl);
+          uploadedStoragePathsRef.current.push(filename);
+          previewUris.push(asset.uri);
+        } catch (err) {
+          console.error("Upload error:", err);
+          Alert.alert("Upload Failed", "One or more images failed to upload.");
+        }
+      }
 
-        const { data: urlData } = authSupabase.storage
-          .from("property-images")
-          .getPublicUrl(filename);
+      updateForm({
+        images: [...form.images, ...uploadedUrls].slice(0, 6),
+        localImages: [...form.localImages, ...previewUris].slice(0, 6),
+      });
+    } finally {
+      setUploadingImages(false);
+    }
+  };
 
-        uploadedUrls.push(urlData.publicUrl);
-        previewUris.push(asset.uri);
-      } catch (err) {
-        console.error("Upload error:", err);
-        Alert.alert("Upload Failed", "One or more images failed to upload.");
+  const handleRemoveImage = async (index: number) => {
+    const imageUrl = form.images[index];
+    const storagePrefix = "/storage/v1/object/public/property-images/";
+    const encodedPath = imageUrl?.split(storagePrefix)[1];
+    if (encodedPath) {
+      const { error } = await authSupabase.storage
+        .from("property-images")
+        .remove([decodeURIComponent(encodedPath)]);
+      if (error) {
+        console.warn("Could not remove unused listing photo:", error);
+      } else {
+        uploadedStoragePathsRef.current = uploadedStoragePathsRef.current.filter(
+          (path) => path !== decodeURIComponent(encodedPath)
+        );
       }
     }
 
-    updateForm({
-      images: [...form.images, ...uploadedUrls],
-      localImages: [...form.localImages, ...previewUris],
-    });
-    setUploadingImages(false);
-  };
-
-  const handleRemoveImage = (index: number) => {
     updateForm({
       images: form.images.filter((_, i) => i !== index),
       localImages: form.localImages.filter((_, i) => i !== index),
@@ -168,7 +271,8 @@ export default function CreatePropertyScreen() {
         latitude: String(location.coords.latitude),
         longitude: String(location.coords.longitude),
       });
-    } catch (err) {
+    } catch (error) {
+      console.error("Could not detect device location:", error);
       Alert.alert("Error", "Could not detect location. Enter manually.");
     } finally {
       setDetectingLocation(false);
@@ -177,131 +281,119 @@ export default function CreatePropertyScreen() {
 
   // ─── Submit ────────────────────────────────────────────────
   const handleSubmit = async () => {
+    if (!isAdminLoaded || !isAdmin) {
+      Alert.alert("Not authorised", "Only approved PGFinders admins can publish listings.");
+      return;
+    }
     if (!form.title.trim())
       return Alert.alert("Validation", "Title is required.");
 
     if (!form.price.trim())
-      return Alert.alert("Validation", "Price is required.");
+      return Alert.alert("Validation", "Monthly rent is required.");
 
     const priceNum = Number(form.price);
     if (isNaN(priceNum) || priceNum < MIN_PRICE)
-      return Alert.alert("Validation", "Price must be greater than ₹0.");
+      return Alert.alert("Validation", "Monthly rent must be greater than ₹0.");
     if (priceNum > MAX_PRICE)
       return Alert.alert(
         "Validation",
-        `Price cannot exceed ₹${MAX_PRICE.toLocaleString("en-IN")}.`
+        `Monthly rent cannot exceed ₹${MAX_PRICE.toLocaleString("en-IN")}.`
       );
 
     if (!form.address.trim())
       return Alert.alert("Validation", "Address is required.");
     if (!form.city.trim())
       return Alert.alert("Validation", "City is required.");
+
+    const ownerWhatsapp = form.ownerWhatsapp.replace(/\D/g, "");
+    if (ownerWhatsapp.length < 10 || ownerWhatsapp.length > 15)
+      return Alert.alert(
+        "Validation",
+        "Enter the owner/manager WhatsApp number with country code (10–15 digits)."
+      );
     if (form.images.length === 0)
       return Alert.alert("Validation", "Please upload at least one image.");
+    if (form.images.length > 6)
+      return Alert.alert("Validation", "A PG listing can have at most 6 photos.");
+
+    const depositNum = form.depositAmount.trim() ? Number(form.depositAmount) : null;
+    if (depositNum !== null &&
+      (!Number.isFinite(depositNum) || depositNum < 0 || depositNum > MAX_PRICE))
+      return Alert.alert("Validation", "Deposit must be between ₹0 and the maximum allowed amount.");
+
+    const amenities = form.amenitiesText
+      .split(",")
+      .map((amenity) => amenity.trim())
+      .filter(Boolean)
+      .slice(0, 20);
+    if (amenities.some((amenity) => amenity.length > 60))
+      return Alert.alert("Validation", "Each amenity must be 60 characters or fewer.");
+
+    const areaNum = form.areaSqft.trim() ? Number(form.areaSqft) : null;
+    if (areaNum !== null && (!Number.isFinite(areaNum) || areaNum <= 0))
+      return Alert.alert("Validation", "Area must be a positive number.");
+
+    const latitudeNum = form.latitude.trim() ? Number(form.latitude) : null;
+    const longitudeNum = form.longitude.trim() ? Number(form.longitude) : null;
+    if ((latitudeNum === null) !== (longitudeNum === null))
+      return Alert.alert("Validation", "Enter both latitude and longitude, or leave both blank.");
+    if (latitudeNum !== null && longitudeNum !== null &&
+      (!Number.isFinite(latitudeNum) || !Number.isFinite(longitudeNum) ||
+       latitudeNum < -90 || latitudeNum > 90 || longitudeNum < -180 || longitudeNum > 180))
+      return Alert.alert("Validation", "Enter valid latitude and longitude values.");
 
     setSubmitting(true);
+    try {
+      const { error } = await authSupabase.from("properties").insert({
+        listing_kind: "pg",
+        owner_whatsapp: ownerWhatsapp,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        price: priceNum,
+        deposit_amount: depositNum,
+        food_available: form.foodAvailable,
+        gender_preference: form.genderPreference,
+        amenities,
+        house_rules: form.houseRules.trim(),
+        type: form.type,
+        bedrooms: form.bedrooms,
+        bathrooms: form.bathrooms,
+        area_sqft: areaNum,
+        address: form.address.trim(),
+        city: form.city.trim(),
+        latitude: latitudeNum,
+        longitude: longitudeNum,
+        images: form.images,
+        is_featured: false,
+        is_sold: false,
+      });
 
-    const { error } = await authSupabase.from("properties").insert({
-      title: form.title.trim(),
-      description: form.description.trim(),
-      price: priceNum,
-      type: form.type,
-      bedrooms: form.bedrooms,
-      bathrooms: form.bathrooms,
-      area_sqft: form.areaSqft ? Number(form.areaSqft) : null,
-      address: form.address.trim(),
-      city: form.city.trim(),
-      latitude: form.latitude ? Number(form.latitude) : null,
-      longitude: form.longitude ? Number(form.longitude) : null,
-      images: form.images,
-      is_featured: form.isFeatured,
-      is_sold: false,
-    });
+      if (error) throw error;
 
-    setSubmitting(false);
-
-    if (error) {
-      Alert.alert("Error", "Failed to create property. Please try again.");
-      console.error(error);
-      return;
+      uploadedStoragePathsRef.current = [];
+      setForm(INITIAL_FORM);
+      Alert.alert("Published! 🎉", "Your PG listing has been published.", [
+        { text: "OK", onPress: () => router.replace("/(root)/(tabs)") },
+      ]);
+    } catch (error) {
+      console.error("Failed to create PG listing:", error);
+      Alert.alert("Error", "Failed to publish the PG listing. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
-
-    setForm(INITIAL_FORM);
-    Alert.alert("Success! 🎉", "Property listed successfully.", [
-      { text: "OK", onPress: () => router.replace("/(root)/(tabs)") },
-    ]);
   };
 
-  // ─── UI Helpers ────────────────────────────────────────────
-  const Counter = ({
-    label,
-    value,
-    onChange,
-  }: {
-    label: string;
-    value: number;
-    onChange: (v: number) => void;
-  }) => (
-    <View className="flex-1">
-      <Text className={labelClass}>{label}</Text>
-      <View className="flex-row items-center bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <TouchableOpacity
-          onPress={() => onChange(Math.max(1, value - 1))}
-          className="w-11 h-11 items-center justify-center"
-        >
-          <Ionicons name="remove" size={18} color="#374151" />
-        </TouchableOpacity>
-        <Text className="flex-1 text-center text-gray-800 font-bold text-base">
-          {value}
-        </Text>
-        <TouchableOpacity
-          onPress={() => onChange(value + 1)}
-          className="w-11 h-11 items-center justify-center"
-        >
-          <Ionicons name="add" size={18} color="#374151" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
 
-  const Toggle = ({
-    label,
-    value,
-    onChange,
-    description,
-  }: {
-    label: string;
-    value: boolean;
-    onChange: (v: boolean) => void;
-    description?: string;
-  }) => (
-    <TouchableOpacity
-      onPress={() => onChange(!value)}
-      className={`flex-row items-center justify-between p-4 rounded-2xl border ${
-        value ? "bg-blue-50 border-blue-200" : "bg-white border-gray-200"
-      }`}
-    >
-      <View className="flex-1 mr-3">
-        <Text
-          className={`font-semibold ${
-            value ? "text-blue-700" : "text-gray-700"
-          }`}
-        >
-          {label}
-        </Text>
-        {description && (
-          <Text className="text-xs text-gray-400 mt-0.5">{description}</Text>
-        )}
-      </View>
-      <View
-        className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
-          value ? "bg-blue-600 border-blue-600" : "border-gray-300"
-        }`}
-      >
-        {value && <Ionicons name="checkmark" size={14} color="white" />}
-      </View>
-    </TouchableOpacity>
-  );
+
+
+  if (!isAdminLoaded) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-gray-50">
+        <ActivityIndicator size="large" color="#2563EB" />
+      </SafeAreaView>
+    );
+  }
+  if (!isAdmin) return <Redirect href="/(root)/(tabs)" />;
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -312,7 +404,7 @@ export default function CreatePropertyScreen() {
         {/* Header */}
         <View className="flex-row items-center px-5 pt-4 pb-3">
           <Text className="text-2xl font-bold text-gray-900 flex-1">
-            Add Property
+            Add PG Listing
           </Text>
         </View>
 
@@ -380,7 +472,7 @@ export default function CreatePropertyScreen() {
             <Text className={labelClass}>Title</Text>
             <TextInput
               className={inputClass}
-              placeholder="e.g. Modern 3BHK in Bandra"
+              placeholder="e.g. Furnished single room near NSUT"
               placeholderTextColor="#9CA3AF"
               value={form.title}
               onChangeText={(v) => updateForm({ title: v })}
@@ -402,23 +494,23 @@ export default function CreatePropertyScreen() {
 
           {/* Price */}
           <View className={sectionClass}>
-            <Text className={labelClass}>Price (₹)</Text>
+            <Text className={labelClass}>Monthly Rent (₹/month)</Text>
             <TextInput
               className={inputClass}
-              placeholder="e.g. 5000000"
+              placeholder="e.g. 12000"
               placeholderTextColor="#9CA3AF"
               value={form.price}
               onChangeText={(v) => updateForm({ price: v })}
               keyboardType="numeric"
             />
             <Text className="text-xs text-gray-400 mt-1.5 ml-1">
-              Valid range: ₹1 – ₹{MAX_PRICE.toLocaleString("en-IN")}
+              Valid monthly rent: ₹1 – ₹{MAX_PRICE.toLocaleString("en-IN")}
             </Text>
           </View>
 
-          {/* Property Type */}
+          {/* PG Stay Type */}
           <View className={sectionClass}>
-            <Text className={labelClass}>Property Type</Text>
+            <Text className={labelClass}>Room / Stay Type</Text>
             <View className="flex-row flex-wrap gap-2">
               {TYPES.map((t) => (
                 <TouchableOpacity
@@ -435,7 +527,7 @@ export default function CreatePropertyScreen() {
                       form.type === t ? "text-white" : "text-gray-600"
                     }`}
                   >
-                    {t}
+                    {TYPE_LABELS[t]}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -468,7 +560,93 @@ export default function CreatePropertyScreen() {
             />
           </View>
 
+          <View className={sectionClass}>
+            <Text className={labelClass}>Security Deposit (₹, optional)</Text>
+            <TextInput
+              className={inputClass}
+              placeholder="e.g. 12000"
+              placeholderTextColor="#9CA3AF"
+              value={form.depositAmount}
+              onChangeText={(v) => updateForm({ depositAmount: v })}
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View className={sectionClass}>
+            <Text className={labelClass}>Accommodation preference</Text>
+            <View className="flex-row gap-2">
+              {([
+                { label: "Any", value: "any" },
+                { label: "Men", value: "male" },
+                { label: "Women", value: "female" },
+              ] as const).map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  accessibilityRole="button"
+                  onPress={() => updateForm({ genderPreference: option.value })}
+                  className={`flex-1 rounded-xl border px-3 py-3 items-center ${
+                    form.genderPreference === option.value
+                      ? "bg-blue-600 border-blue-600"
+                      : "bg-white border-gray-200"
+                  }`}
+                >
+                  <Text className={`font-semibold ${
+                    form.genderPreference === option.value ? "text-white" : "text-gray-700"
+                  }`}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <TouchableOpacity
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: form.foodAvailable }}
+            onPress={() => updateForm({ foodAvailable: !form.foodAvailable })}
+            className={`flex-row items-center justify-between rounded-2xl border p-4 mb-5 ${
+              form.foodAvailable ? "bg-blue-50 border-blue-200" : "bg-white border-gray-200"
+            }`}
+          >
+            <View>
+              <Text className="text-gray-800 font-semibold">Food included</Text>
+              <Text className="text-xs text-gray-500 mt-1">Is food provided as part of the stay?</Text>
+            </View>
+            <Ionicons
+              name={form.foodAvailable ? "checkbox" : "square-outline"}
+              size={22}
+              color={form.foodAvailable ? "#2563EB" : "#9CA3AF"}
+            />
+          </TouchableOpacity>
+
+          <View className={sectionClass}>
+            <Text className={labelClass}>Amenities (comma-separated)</Text>
+            <TextInput
+              className={inputClass}
+              placeholder="Wi-Fi, laundry, AC, power backup"
+              placeholderTextColor="#9CA3AF"
+              value={form.amenitiesText}
+              onChangeText={(v) => updateForm({ amenitiesText: v })}
+            />
+            <Text className="text-xs text-gray-400 mt-1">Add up to 20 amenities.</Text>
+          </View>
+
+          <View className={sectionClass}>
+            <Text className={labelClass}>House rules (optional)</Text>
+            <TextInput
+              className={`${inputClass} h-24`}
+              placeholder="Curfew, visitors, smoking, quiet hours..."
+              placeholderTextColor="#9CA3AF"
+              value={form.houseRules}
+              onChangeText={(v) => updateForm({ houseRules: v })}
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
+
           {/* Location */}
+          <Text className="text-xs text-gray-500 mb-3">
+            Use device location only when you are physically at the PG. Otherwise, enter the
+            PG&apos;s coordinates manually or leave them blank.
+          </Text>
           <View className={sectionClass}>
             <Text className={labelClass}>Address</Text>
             <TextInput
@@ -489,6 +667,22 @@ export default function CreatePropertyScreen() {
               value={form.city}
               onChangeText={(v) => updateForm({ city: v })}
             />
+          </View>
+
+          <View className={sectionClass}>
+            <Text className={labelClass}>Owner / Manager WhatsApp</Text>
+            <TextInput
+              className={inputClass}
+              placeholder="e.g. 919876543210"
+              placeholderTextColor="#9CA3AF"
+              value={form.ownerWhatsapp}
+              onChangeText={(v) => updateForm({ ownerWhatsapp: v })}
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+            />
+            <Text className="text-xs text-gray-400 mt-1">
+              Include the country code; enter 10–15 digits. This number is shown to people viewing the listing.
+            </Text>
           </View>
 
           {/* Coordinates */}
@@ -535,16 +729,6 @@ export default function CreatePropertyScreen() {
             </View>
           </View>
 
-          {/* Toggles */}
-          <View className="gap-3 mb-5">
-            <Toggle
-              label="Featured Property"
-              description="Show this in the Featured section on home"
-              value={form.isFeatured}
-              onChange={(v) => updateForm({ isFeatured: v })}
-            />
-          </View>
-
           {/* Submit */}
           <TouchableOpacity
             onPress={handleSubmit}
@@ -563,7 +747,7 @@ export default function CreatePropertyScreen() {
               <ActivityIndicator color="white" />
             ) : (
               <Text className="text-white font-bold text-base">
-                List Property
+                Publish PG Listing
               </Text>
             )}
           </TouchableOpacity>
