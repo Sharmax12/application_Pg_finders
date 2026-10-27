@@ -46,7 +46,7 @@ export default function FeaturedCard({ property }: { property: Property }) {
 
       {property.is_sold && (
         <View className="absolute top-3 right-3 bg-red-500 px-3 py-1 rounded-full">
-          <Text className="text-xs font-semibold text-white">Sold</Text>
+          <Text className="text-xs font-semibold text-white">Unavailable</Text>
         </View>
       )}
 
