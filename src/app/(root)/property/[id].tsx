@@ -197,6 +197,8 @@ export default function PropertyDetailScreen() {
     : [];
   const description = typeof property.description === "string" ? property.description : "";
   const hasCoordinates =
+    typeof property.latitude === "number" &&
+    typeof property.longitude === "number" &&
     Number.isFinite(property.latitude) &&
     Number.isFinite(property.longitude) &&
     property.latitude >= -90 &&
@@ -301,7 +303,7 @@ export default function PropertyDetailScreen() {
           <View className="flex-row gap-2 mb-3 flex-wrap">
             <View className="bg-blue-50 px-3 py-1 rounded-full">
               <Text className="text-blue-600 text-xs font-semibold capitalize">
-                {property.type}
+                {property.room_type.replace(/_/g, " ")}
               </Text>
             </View>
             {property.is_featured && (
@@ -323,7 +325,7 @@ export default function PropertyDetailScreen() {
             {property.title}
           </Text>
           <Text className="text-blue-600 text-xl font-bold mb-4">
-            {formatPrice(property.price)}
+            {typeof property.monthly_rent === "number" ? `${formatPrice(property.monthly_rent)}/month` : "Rent not set"}
           </Text>
 
           {/* Specs Row */}
@@ -345,6 +347,42 @@ export default function PropertyDetailScreen() {
             />
             <SpecItem icon="home-outline" label="Type" value={property.type} />
           </View>
+
+          <View className="flex-row flex-wrap gap-2 mb-5">
+            <View className="bg-gray-50 rounded-xl px-3 py-2">
+              <Text className="text-xs text-gray-400">Security deposit</Text>
+              <Text className="text-sm font-semibold text-gray-800">
+                {typeof property.security_deposit === "number"
+                  ? formatPrice(property.security_deposit)
+                  : "Not specified"}
+              </Text>
+            </View>
+            <View className="bg-gray-50 rounded-xl px-3 py-2">
+              <Text className="text-xs text-gray-400">Preference</Text>
+              <Text className="text-sm font-semibold text-gray-800 capitalize">
+                {property.gender_preference === "any" ? "Any" : property.gender_preference}
+              </Text>
+            </View>
+            <View className="bg-gray-50 rounded-xl px-3 py-2">
+              <Text className="text-xs text-gray-400">Food</Text>
+              <Text className="text-sm font-semibold text-gray-800">
+                {property.food_included ? "Included" : "Not included"}
+              </Text>
+            </View>
+          </View>
+
+          {property.amenities?.length > 0 && (
+            <View className="mb-5">
+              <Text className="text-base font-bold text-gray-900 mb-2">Amenities</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {property.amenities.map((amenity) => (
+                  <View key={amenity} className="bg-blue-50 px-3 py-1.5 rounded-full">
+                    <Text className="text-xs font-medium text-blue-700">{amenity}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* Description */}
           <Text className="text-base font-bold text-gray-900 mb-2">
