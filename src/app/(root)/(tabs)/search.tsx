@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../../lib/superbase";
 import { Property } from "../../../../types/types";
 import { useFilterStore } from "../../../../store/filterStore";
@@ -18,17 +18,16 @@ import FilterModal from "../../../../components/FilterModal";
 import { useLocalSearchParams } from "expo-router";
 
 export default function SearchScreen() {
-  const [results, setResults] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-
   const { openFilters } = useLocalSearchParams<{ openFilters?: string }>();
+  const [showFilters, setShowFilters] = useState(openFilters === "true");
+  const [lastOpenFiltersParam, setLastOpenFiltersParam] = useState(openFilters);
 
-  useEffect(() => {
+  if (lastOpenFiltersParam !== openFilters) {
+    setLastOpenFiltersParam(openFilters);
     if (openFilters === "true") {
       setShowFilters(true);
     }
-  }, [openFilters]);
+  }
 
   const {
     search,
@@ -42,6 +41,21 @@ export default function SearchScreen() {
     setMinPrice,
     setMaxPrice,
   } = useFilterStore();
+  const [retryCount, setRetryCount] = useState(0);
+  const request = useMemo(
+    () => ({ search, type, bedrooms, minPrice, maxPrice, retryCount }),
+    [search, type, bedrooms, minPrice, maxPrice, retryCount]
+  );
+  const requestKey = JSON.stringify(request);
+  const [response, setResponse] = useState<{
+    key: string;
+    results: Property[];
+    error: string | null;
+  } | null>(null);
+  const currentResponse = response?.key === requestKey ? response : null;
+  const results = currentResponse?.results ?? [];
+  const error = currentResponse?.error ?? null;
+  const loading = currentResponse === null;
 
   const activeFilterCount = [
     type !== null,
@@ -51,39 +65,73 @@ export default function SearchScreen() {
   ].filter(Boolean).length;
 
   useEffect(() => {
-    fetchResults();
-  }, [search, type, bedrooms, minPrice, maxPrice]);
+    let isCurrent = true;
 
-  const fetchResults = async () => {
-    setLoading(true);
+    const fetchResults = async () => {
+      try {
+        let query = supabase.from("properties").select("*");
 
-    let query = supabase.from("properties").select("*");
+        if (request.search) {
+          const escapedSearch = request.search
+            .replace(/\\/g, "\\\\")
+            .replace(/"/g, '\\"');
+          query = query.or(
+            `title.ilike."%${escapedSearch}%",city.ilike."%${escapedSearch}%"`
+          );
+        }
 
-    if (search) {
-      query = query.or(`title.ilike.%${search}%,city.ilike.%${search}%`);
-    }
+        if (request.type) {
+          query = query.eq("type", request.type);
+        }
 
-    if (type) {
-      query = query.eq("type", type);
-    }
+        if (request.bedrooms !== null) {
+          query =
+            request.bedrooms === 4
+              ? query.gte("bedrooms", 4)
+              : query.eq("bedrooms", request.bedrooms);
+        }
 
-    if (bedrooms) {
-      query = query.eq("bedrooms", bedrooms);
-    }
+        if (request.minPrice !== null) {
+          query = query.gte("price", request.minPrice);
+        }
 
-    if (minPrice) {
-      query = query.gte("price", minPrice);
-    }
+        if (request.maxPrice !== null) {
+          query = query.lte("price", request.maxPrice);
+        }
 
-    if (maxPrice) {
-      query = query.lte("price", maxPrice);
-    }
+        const { data, error: fetchError } = await query.order("created_at", {
+          ascending: false,
+        });
 
-    const { data } = await query.order("created_at", { ascending: false });
+        if (fetchError) {
+          throw fetchError;
+        }
 
-    setResults(data ?? []);
-    setLoading(false);
-  };
+        if (isCurrent) {
+          setResponse({
+            key: requestKey,
+            results: data ?? [],
+            error: null,
+          });
+        }
+      } catch (fetchError) {
+        console.error("Failed to fetch search properties:", fetchError);
+        if (isCurrent) {
+          setResponse({
+            key: requestKey,
+            results: [],
+            error: "Unable to search properties. Please try again.",
+          });
+        }
+      }
+    };
+
+    void fetchResults();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [request, requestKey]);
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -179,11 +227,13 @@ export default function SearchScreen() {
             {(minPrice !== null || maxPrice !== null) && (
               <View className="flex-row items-center bg-blue-50 border border-blue-200 rounded-full px-3 py-1 gap-1">
                 <Text className="text-blue-700 text-xs font-semibold">
-                  {minPrice && maxPrice
+                  {minPrice !== null && maxPrice !== null
                     ? `${formatPrice(minPrice)} – ${formatPrice(maxPrice)}`
-                    : minPrice
+                    : minPrice !== null
                     ? `From ${formatPrice(minPrice)}`
-                    : `Up to ${formatPrice(maxPrice!)}`}
+                    : maxPrice !== null
+                    ? `Up to ${formatPrice(maxPrice)}`
+                    : ""}
                 </Text>
                 <TouchableOpacity
                   onPress={() => {
@@ -214,13 +264,27 @@ export default function SearchScreen() {
         ListEmptyComponent={
           !loading ? (
             <View className="items-center py-20">
-              <Ionicons name="search-outline" size={48} color="#D1D5DB" />
-              <Text className="text-gray-400 mt-4 text-base">
-                No properties found
-              </Text>
-              <Text className="text-gray-300 text-sm mt-1">
-                Try a different search or adjust filters
-              </Text>
+              {error ? (
+                <>
+                  <Text className="text-center text-red-600">{error}</Text>
+                  <TouchableOpacity
+                    onPress={() => setRetryCount((count) => count + 1)}
+                    className="mt-3 rounded-xl bg-blue-600 px-4 py-2"
+                  >
+                    <Text className="font-semibold text-white">Try again</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="search-outline" size={48} color="#D1D5DB" />
+                  <Text className="text-gray-400 mt-4 text-base">
+                    No properties found
+                  </Text>
+                  <Text className="text-gray-300 text-sm mt-1">
+                    Try a different search or adjust filters
+                  </Text>
+                </>
+              )}
             </View>
           ) : (
             <ActivityIndicator size="large" color="#2563EB" className="py-20" />

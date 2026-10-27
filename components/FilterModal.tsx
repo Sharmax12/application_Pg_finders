@@ -9,7 +9,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useFilterStore, PropertyType } from "../store/filterStore";
-import { formatPrice } from "../lib/utils";
 
 const TYPES: { label: string; value: PropertyType }[] = [
   { label: "All", value: null },
@@ -61,8 +60,30 @@ export default function FilterModal({
     resetFilters,
   } = useFilterStore();
 
-  const [localMin, setLocalMin] = useState(minPrice ? String(minPrice) : "");
-  const [localMax, setLocalMax] = useState(maxPrice ? String(maxPrice) : "");
+  const [localMin, setLocalMin] = useState(
+    minPrice !== null ? String(minPrice) : ""
+  );
+  const [localMax, setLocalMax] = useState(
+    maxPrice !== null ? String(maxPrice) : ""
+  );
+  const [syncedValues, setSyncedValues] = useState({
+    visible,
+    minPrice,
+    maxPrice,
+  });
+
+  if (
+    syncedValues.visible !== visible ||
+    (visible &&
+      (syncedValues.minPrice !== minPrice ||
+        syncedValues.maxPrice !== maxPrice))
+  ) {
+    setSyncedValues({ visible, minPrice, maxPrice });
+    if (visible) {
+      setLocalMin(minPrice !== null ? String(minPrice) : "");
+      setLocalMax(maxPrice !== null ? String(maxPrice) : "");
+    }
+  }
 
   const activeCount = [type, bedrooms, minPrice, maxPrice].filter(
     (v) => v !== null
@@ -121,6 +142,7 @@ export default function FilterModal({
             {TYPES.map((item) => (
               <TouchableOpacity
                 key={String(item.value)}
+                accessibilityRole="button"
                 onPress={() => setType(item.value)}
                 className={chip(type === item.value)}
                 style={shadow}
@@ -140,6 +162,7 @@ export default function FilterModal({
             {BEDS.map((item) => (
               <TouchableOpacity
                 key={String(item.value)}
+                accessibilityRole="button"
                 onPress={() => setBedrooms(item.value)}
                 className={`flex-1 items-center py-3 rounded-2xl border ${
                   bedrooms === item.value

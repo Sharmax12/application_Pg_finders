@@ -23,32 +23,64 @@ export default function HomeScreen() {
   const [featured, setFeatured] = useState<Property[]>([]);
   const [recommended, setRecommended] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
-      fetchProperties();
-    }, [])
+      let isCurrent = true;
+
+      const fetchProperties = async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+          const [featuredResult, recommendedResult] = await Promise.all([
+            supabase
+              .from("properties")
+              .select("*")
+              .eq("is_featured", true)
+              .order("created_at", { ascending: false }),
+            supabase
+              .from("properties")
+              .select("*")
+              .eq("is_featured", false)
+              .order("created_at", { ascending: false }),
+          ]);
+
+          if (featuredResult.error) {
+            throw featuredResult.error;
+          }
+          if (recommendedResult.error) {
+            throw recommendedResult.error;
+          }
+
+          if (isCurrent) {
+            setFeatured(featuredResult.data ?? []);
+            setRecommended(recommendedResult.data ?? []);
+          }
+        } catch (fetchError) {
+          console.error(
+            `Failed to fetch home properties on retry ${retryCount}:`,
+            fetchError
+          );
+          if (isCurrent) {
+            setError("Unable to load properties. Please try again.");
+          }
+        } finally {
+          if (isCurrent) {
+            setLoading(false);
+          }
+        }
+      };
+
+      void fetchProperties();
+
+      return () => {
+        isCurrent = false;
+      };
+    }, [retryCount])
   );
-
-  const fetchProperties = async () => {
-    setLoading(true);
-
-    const { data: featuredData } = await supabase
-      .from("properties")
-      .select("*")
-      .eq("is_featured", true)
-      .order("created_at", { ascending: false });
-
-    const { data: recommendedData } = await supabase
-      .from("properties")
-      .select("*")
-      .eq("is_featured", false)
-      .order("created_at", { ascending: false });
-
-    setFeatured(featuredData ?? []);
-    setRecommended(recommendedData ?? []);
-    setLoading(false);
-  };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -112,6 +144,16 @@ export default function HomeScreen() {
                   color="#2563EB"
                   className="py-10"
                 />
+              ) : error ? (
+                <View className="items-center px-5 py-6">
+                  <Text className="text-center text-red-600">{error}</Text>
+                  <TouchableOpacity
+                    onPress={() => setRetryCount((count) => count + 1)}
+                    className="mt-3 rounded-xl bg-blue-600 px-4 py-2"
+                  >
+                    <Text className="font-semibold text-white">Try again</Text>
+                  </TouchableOpacity>
+                </View>
               ) : (
                 <FlatList
                   data={featured}
@@ -136,7 +178,7 @@ export default function HomeScreen() {
           </View>
         )}
         ListEmptyComponent={
-          !loading
+          !loading && !error
             ? () => (
                 <View className="items-center py-10">
                   <Text className="text-gray-400">No properties found</Text>
