@@ -26,9 +26,9 @@ beforeEach(() => {
 it("updates the account name through Clerk", async () => {
   const screen = await render(<Profile />);
 
-  fireEvent.changeText(screen.getByLabelText("First name"), "Augusta");
-  fireEvent.changeText(screen.getByLabelText("Last name"), "Byron");
-  fireEvent.press(screen.getByText("Save changes"));
+  await fireEvent.changeText(screen.getByLabelText("First name"), "Augusta");
+  await fireEvent.changeText(screen.getByLabelText("Last name"), "Byron");
+  await fireEvent.press(screen.getByText("Save changes"));
 
   await waitFor(() => {
     expect(mockUser.update).toHaveBeenCalledWith({
@@ -41,7 +41,7 @@ it("updates the account name through Clerk", async () => {
 it("signs out through Clerk", async () => {
   const screen = await render(<Profile />);
 
-  fireEvent.press(screen.getByText("Sign out"));
+  await fireEvent.press(screen.getByText("Sign out"));
 
   await waitFor(() => {
     expect(mockSignOut).toHaveBeenCalledTimes(1);
