@@ -20,9 +20,9 @@ The first launch should be a focused PG discovery and enquiry product, not a ful
 - Home and search load property rows; search filters by title/city, property type, bedroom count and price.
 - Property detail includes photos, map preview, save, contact and admin actions.
 - Automated tests exist for the home/search flow and filter modal.
-- The Saved, Profile and Create Property screens were placeholders before this review branch.
+- The Saved and Profile screens were placeholders before this review branch; the branch adds saved-list loading and a Clerk-backed editable-name/sign-out screen. Create Property remains a placeholder pending the PG schema and owner-permission rules.
 - The current data vocabulary is generic real estate: `is_sold`, `bedrooms`, `bathrooms`, `area_sqft`, property types such as apartment/house/villa/studio, and price presets in lakhs/crores. That does not match PG rental discovery.
-- The app metadata still says `my-app` / `myapp`, and some authentication copy says “Find your dream home”.
+- This branch now sets the Expo display name, slug and URI scheme to `PGFinders` / `pgfinders`, aligns the npm package and lockfile names, and changes the generic “Find your dream home” sign-up copy. The current image assets are still named `kribb.*`, so final brand artwork should be confirmed before store submission. Stable iOS bundle ID and Android package identifiers remain unset and must be selected before production builds.
 - The repository did not contain Supabase migrations/schema/RLS policy files or a GitHub Actions workflow at review time. The live database configuration therefore cannot be confirmed from source alone.
 
 ### Changed on the review branch
@@ -30,12 +30,20 @@ The first launch should be a focused PG discovery and enquiry product, not a ful
 - Added ignore rules for Expo cache/build output, local environment files, logs and OS metadata.
 - Removed tracked `.expo`, `dist` and `.DS_Store` files from the branch.
 - Changed saved-property lookup to use `maybeSingle()`, check Supabase errors, avoid reporting failed writes as successful, and reset loading state in `finally`.
-- Hardened Clerk-to-Supabase user synchronisation: handles missing email, catches sync failures, uses an upsert on `clerk_id`, and fails closed in the UI for admin state.
+- Hardened Clerk-to-Supabase user synchronisation: handles missing email, catches sync failures, reads before inserting, recovers from a concurrent profile-creation race, and fails closed in the UI for admin state.
 - Added catch/error feedback for rejected sign-in operations and a visible auth-loading state.
 - Implemented the Saved screen and separated a card's Save action from its property-navigation touch target.
 - Added a clean-install CI workflow and an environment example.
 
-These code changes still require a successful CI run and device testing before they are considered production-verified.
+These code changes still require the latest CI run and device testing before they are considered production-verified.
+
+### Dependency audit finding
+
+The branch's CI audit currently reports four high-severity dependency advisories: 
+- Zod < 4.6.6 (GHSA-mrhx-c7xc-m3w5), pulled in by Expo CLI; the audit resolver recommends a major Expo downgrade instead of a verified SDK 58-compatible fix.
+- node-forge <= 1.4.0 (GHSA-86w9-cpqp-85rv), pulled in by Expo code-signing tooling; the advisory database currently reports no patched upstream release.
+
+These are dependency-chain findings in Expo's tooling, not proof of an exploitable user-facing endpoint. Do not hide them or apply a blind major-version override. Recheck upstream fixes, evaluate a tested compatible patch/override, or record a time-bounded risk exception before public release. Track the advisory output in the GitHub Actions logs.
 
 ## Product recommendation
 
@@ -113,7 +121,7 @@ Use check constraints for non-negative prices/deposits and valid statuses, forei
 1. **RLS must be reviewed against the live database.** Public clients should read only published listings and public fields. Owners may edit only their own listings. Only trusted admins may moderate/delete other owners' listings or grant admin roles. Saved items and enquiries must be scoped to the signed-in user.
 2. **Never use a Supabase service-role/secret key in the app.** The mobile client may contain the Supabase publishable key and Clerk publishable key; neither is an authorization policy.
 3. **Verify Clerk token claims in Supabase policies.** The client passes a Clerk session token to Supabase. Ensure the live project has the matching third-party auth integration and policies that use the correct identity claim.
-4. **Verify the `users.clerk_id` unique constraint and insert/upsert policy.** The revised hook assumes a unique conflict target on `clerk_id`; the live schema must satisfy that assumption.
+4. **Verify the `users.clerk_id` unique constraint and insert policy.** A unique constraint prevents duplicate profiles; the hook reads first, attempts an insert, and re-reads if another device creates the profile concurrently.
 5. **Audit the admin mutation routes.** Client-side hiding of the Create tab is convenience only. Test a non-admin token directly against INSERT/UPDATE/DELETE operations.
 6. **Protect contact details and enquiries.** Do not expose owner private phone/email data in public listing queries by default. Get appropriate user consent before opening external messaging or sharing contact details.
 7. **Validate listing submissions and uploads.** Constrain image type/size, verify ownership, limit report/enquiry abuse, and avoid accepting arbitrary client-provided admin fields.
