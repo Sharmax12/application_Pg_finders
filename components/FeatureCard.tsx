@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 import { SymbolView } from "expo-symbols";
-import type { Property } from "../types/types";
+import { formatListingType, type Property } from "../types/types";
 import { formatPrice } from "../lib/utils";
 
 export default function FeaturedCard({ property }: { property: Property }) {
@@ -21,16 +21,26 @@ export default function FeaturedCard({ property }: { property: Property }) {
       }}
     >
       {/* Image */}
-      <Image
-        source={{ uri: property.images[0] }}
-        className="w-full h-44"
-        resizeMode="cover"
-      />
+      {property.images?.[0] ? (
+        <Image
+          source={{ uri: property.images[0] }}
+          className="w-full h-44"
+          resizeMode="cover"
+        />
+      ) : (
+        <View className="w-full h-44 bg-gray-100 items-center justify-center">
+          <SymbolView
+            name={{ ios: "photo", android: "image" }}
+            size={30}
+            tintColor="#9CA3AF"
+          />
+        </View>
+      )}
 
       {/* Badge */}
       <View className="absolute top-3 left-3 bg-white/90 px-3 py-1 rounded-full">
         <Text className="text-xs font-semibold text-blue-600 capitalize">
-          {property.type}
+          {formatListingType(property.type)}
         </Text>
       </View>
 
@@ -62,7 +72,7 @@ export default function FeaturedCard({ property }: { property: Property }) {
 
         <View className="flex-row items-center justify-between">
           <Text className="text-blue-600 font-bold text-base">
-            {formatPrice(property.price)}
+            {formatPrice(property.price)}/mo
           </Text>
           <View className="flex-row items-center gap-3">
             <View className="flex-row items-center gap-1">
