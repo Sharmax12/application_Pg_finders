@@ -9,6 +9,13 @@ export const useUserSync = () => {
   const setIsAdmin = useUserStore((state) => state.setIsAdmin);
   const setIsAdminLoaded = useUserStore((state) => state.setIsAdminLoaded);
   const authSupabase = useSuperbase();
+  const userId = user?.id;
+  const email =
+    user?.primaryEmailAddress?.emailAddress ??
+    user?.emailAddresses[0]?.emailAddress;
+  const firstName = user?.firstName ?? null;
+  const lastName = user?.lastName ?? null;
+  const avatarUrl = user?.imageUrl ?? null;
 
   useEffect(() => {
     let isCurrent = true;
@@ -31,11 +38,7 @@ export const useUserSync = () => {
     }
 
     const syncUser = async () => {
-      const email =
-        user.primaryEmailAddress?.emailAddress ??
-        user.emailAddresses[0]?.emailAddress;
-
-      if (!email) {
+      if (!userId || !email) {
         console.error("Cannot sync Clerk user without an email address.");
         if (isCurrent) {
           setIsAdmin(false);
@@ -45,59 +48,38 @@ export const useUserSync = () => {
       }
 
       try {
-        const { data: existingUser, error: lookupError } = await authSupabase
+        const { data: syncedUser, error: syncError } = await authSupabase
           .from("users")
-          .select("clerk_id, is_admin")
-          .eq("clerk_id", user.id)
-          .maybeSingle();
-
-        if (lookupError) throw lookupError;
-
-        if (existingUser) {
-          if (isCurrent) {
-            setIsAdmin(existingUser.is_admin === true);
-            setIsAdminLoaded(true);
-          }
-          return;
-        }
-
-        const { data: newUser, error: insertError } = await authSupabase
-          .from("users")
-          .insert({
-            clerk_id: user.id,
-            email,
-            first_name: user.firstName,
-            last_name: user.lastName,
-            avatar_url: user.imageUrl,
-          })
+          .upsert(
+            {
+              clerk_id: userId,
+              email,
+              first_name: firstName,
+              last_name: lastName,
+              avatar_url: avatarUrl,
+            },
+            { onConflict: "clerk_id" }
+          )
           .select("is_admin")
           .single();
 
-        if (insertError) {
-          // Another render/device may have created the profile after our lookup.
-          // Re-read once so the unique-clerk_id race does not leave the UI stuck.
-          const { data: concurrentUser, error: concurrentLookupError } =
-            await authSupabase
-              .from("users")
-              .select("clerk_id, is_admin")
-              .eq("clerk_id", user.id)
-              .maybeSingle();
-
-          if (concurrentLookupError || !concurrentUser) throw insertError;
-
-          if (isCurrent) {
-            setIsAdmin(concurrentUser.is_admin === true);
-            setIsAdminLoaded(true);
-          }
-          return;
-        }
+        if (syncError) throw syncError;
 
         if (isCurrent) {
-          setIsAdmin(newUser?.is_admin === true);
+          setIsAdmin(syncedUser?.is_admin === true);
           setIsAdminLoaded(true);
         }
       } catch (error) {
-        console.error("Failed to sync Clerk user with Supabase:", error);
+        const details =
+          typeof error === "object" && error !== null
+            ? {
+                code: "code" in error ? error.code : undefined,
+                message: "message" in error ? error.message : undefined,
+                details: "details" in error ? error.details : undefined,
+                hint: "hint" in error ? error.hint : undefined,
+              }
+            : error;
+        console.error("Failed to sync Clerk user with Supabase:", details);
         // Fail closed in the UI. Database RLS must independently protect admin actions.
         if (isCurrent) {
           setIsAdmin(false);
@@ -113,10 +95,14 @@ export const useUserSync = () => {
     };
   }, [
     authSupabase,
+    avatarUrl,
+    email,
+    firstName,
     isAuthLoaded,
     isUserLoaded,
+    lastName,
     setIsAdmin,
     setIsAdminLoaded,
-    user,
+    userId,
   ]);
 };
