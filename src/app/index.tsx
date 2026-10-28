@@ -1,7 +1,7 @@
 import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, Redirect, useRouter } from "expo-router";
-import { ActivityIndicator, Image, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function WelcomeScreen() {
@@ -24,11 +24,9 @@ export default function WelcomeScreen() {
     <SafeAreaView className="flex-1 bg-white">
       <View className="flex-1 justify-between px-6 pb-7 pt-10">
         <View className="items-center">
-          <Image
-            source={require("../../assets/images/kribb.png")}
-            style={{ width: 150, height: 58 }}
-            resizeMode="contain"
-          />
+          <Text className="text-3xl font-extrabold tracking-tight text-blue-600">
+            PGFinders
+          </Text>
           <View className="mt-12 h-24 w-24 items-center justify-center rounded-[28px] bg-blue-50">
             <Ionicons name="home-outline" size={46} color="#2563EB" />
           </View>

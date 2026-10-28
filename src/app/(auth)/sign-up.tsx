@@ -3,7 +3,6 @@ import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   Text,
   TextInput,
@@ -108,11 +107,9 @@ export default function SignUpScreen() {
   ) {
     return (
       <View className="flex-1 justify-center items-center bg-white px-6">
-        <Image
-          source={require("../../../assets/images/kribb.png")}
-          className="w-32 h-16 mb-8"
-          resizeMode="contain"
-        />
+        <Text className="mb-8 text-3xl font-extrabold tracking-tight text-blue-600">
+          PGFinders
+        </Text>
         <Text className="text-2xl font-bold text-gray-800 mb-2">
           Verify your account
         </Text>
@@ -186,11 +183,9 @@ export default function SignUpScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <View className="flex-1 justify-center px-6 py-12">
-        <Image
-          source={require("../../../assets/images/kribb.png")}
-          className="w-36 h-16 mb-8"
-          resizeMode="contain"
-        />
+        <Text className="mb-8 text-3xl font-extrabold tracking-tight text-blue-600">
+          PGFinders
+        </Text>
         <Text className="text-3xl font-bold text-gray-800 mb-2">
           Create account
         </Text>
