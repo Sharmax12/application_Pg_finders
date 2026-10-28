@@ -197,7 +197,9 @@ The current application entry flow uses Clerk authentication.
 1. `src/app/_layout.tsx` wraps the application with `ClerkProvider`.
 2. `src/app/index.tsx` waits for authentication state to load.
 3. Authenticated users are redirected to the main tab area.
-4. Unauthenticated users are redirected to `/sign-in`.
+4. Unauthenticated users see a welcome screen with a prominent account-creation action and a separate sign-in link.
+5. `src/app/(auth)/sign-up.tsx` creates the account and verifies the email address. Both sign-in and sign-up screens link to the legal pages.
+6. Signed-in users can open Settings from Profile. The public `/privacy-policy` and `/terms-of-use` routes are also accessible before signing in.
 
 Ensure the Clerk publishable key is configured before launching the application.
 
