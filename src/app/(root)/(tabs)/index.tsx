@@ -9,7 +9,6 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Text,
   TouchableOpacity,
   View,
@@ -97,11 +96,9 @@ export default function HomeScreen() {
           <View>
             {/* Header */}
             <View className="flex-row items-center justify-between px-5 pt-4 pb-5">
-              <Image
-                source={require("../../../../assets/images/kribb.png")}
-                style={{ width: 90, height: 36 }}
-                resizeMode="contain"
-              />
+              <Text className="text-2xl font-extrabold tracking-tight text-blue-600">
+                PGFinders
+              </Text>
               <View className="items-end">
                 <Text className="text-gray-500 text-xs">Find your next PG 👋</Text>
                 <Text className="text-gray-900 text-base font-bold">
