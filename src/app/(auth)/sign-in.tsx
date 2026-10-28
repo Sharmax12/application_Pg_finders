@@ -308,17 +308,17 @@ export default function SignInScreen() {
             <Text className="text-blue-600 font-semibold">Sign Up</Text>
           </Link>
         </View>
-        <Text className="mt-6 text-center text-xs leading-5 text-gray-400">
-          By signing in, you agree to our{" "}
+        <View className="mt-6 flex-row flex-wrap items-center justify-center">
+          <Text className="text-center text-xs leading-5 text-gray-400">By signing in, you agree to our </Text>
           <Link href="/terms-of-use">
-            <Text className="font-semibold text-blue-600">Terms of Use</Text>
+            <Text className="text-xs font-semibold text-blue-600">Terms of Use</Text>
           </Link>
-          {" "}and{" "}
+          <Text className="text-xs text-gray-400"> and </Text>
           <Link href="/privacy-policy">
-            <Text className="font-semibold text-blue-600">Privacy Policy</Text>
+            <Text className="text-xs font-semibold text-blue-600">Privacy Policy</Text>
           </Link>
-          .
-        </Text>
+          <Text className="text-xs text-gray-400">.</Text>
+        </View>
       </View>
     </ScrollView>
   );
