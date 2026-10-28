@@ -55,17 +55,17 @@ export default function WelcomeScreen() {
               <Text className="text-sm font-bold text-blue-600">Sign in</Text>
             </Link>
           </View>
-          <Text className="mt-7 text-center text-xs leading-5 text-slate-400">
-            By continuing, you agree to our{" "}
+          <View className="mt-7 flex-row flex-wrap items-center justify-center">
+            <Text className="text-center text-xs leading-5 text-slate-400">By continuing, you agree to our </Text>
             <Link href="/terms-of-use">
-              <Text className="font-semibold text-slate-600">Terms of Use</Text>
+              <Text className="text-xs font-semibold text-slate-600">Terms of Use</Text>
             </Link>
-            {" "}and{" "}
+            <Text className="text-xs text-slate-400"> and </Text>
             <Link href="/privacy-policy">
-              <Text className="font-semibold text-slate-600">Privacy Policy</Text>
+              <Text className="text-xs font-semibold text-slate-600">Privacy Policy</Text>
             </Link>
-            .
-          </Text>
+            <Text className="text-xs text-slate-400">.</Text>
+          </View>
         </View>
       </View>
     </SafeAreaView>
