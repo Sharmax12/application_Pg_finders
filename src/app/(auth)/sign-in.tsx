@@ -308,6 +308,18 @@ export default function SignInScreen() {
             <Text className="text-blue-600 font-semibold">Sign Up</Text>
           </Link>
         </View>
+
+        <View className="flex-row flex-wrap justify-center mt-6 px-3">
+          <Text className="text-xs text-gray-400">By using PGFinders, you acknowledge our </Text>
+          <Link href="/terms-of-use">
+            <Text className="text-xs text-blue-600 font-semibold">Terms of Use</Text>
+          </Link>
+          <Text className="text-xs text-gray-400"> and </Text>
+          <Link href="/privacy-policy">
+            <Text className="text-xs text-blue-600 font-semibold">Privacy Policy</Text>
+          </Link>
+          <Text className="text-xs text-gray-400">.</Text>
+        </View>
       </View>
     </ScrollView>
   );
