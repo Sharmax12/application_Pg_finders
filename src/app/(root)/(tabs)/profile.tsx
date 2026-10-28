@@ -23,7 +23,7 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      router.replace("/sign-in");
+      router.replace("/");
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -129,7 +129,7 @@ export default function ProfileScreen() {
         <MenuItem
           icon="settings-outline"
           label="Settings"
-          onPress={() => Alert.alert("Coming Soon", "Settings coming soon!")}
+          onPress={() => router.push("/settings")}
         />
         <MenuItem
           icon="help-circle-outline"

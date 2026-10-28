@@ -40,6 +40,6 @@ it("signs out through Clerk", async () => {
 
   await waitFor(() => {
     expect(mockSignOut).toHaveBeenCalledTimes(1);
-    expect(mockReplace).toHaveBeenCalledWith("/sign-in");
+    expect(mockReplace).toHaveBeenCalledWith("/");
   });
 });

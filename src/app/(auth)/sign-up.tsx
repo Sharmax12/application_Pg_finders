@@ -263,6 +263,17 @@ export default function SignUpScreen() {
             <Text className="text-blue-600 font-semibold">Sign In</Text>
           </Link>
         </View>
+        <View className="mt-6 flex-row flex-wrap items-center justify-center">
+          <Text className="text-center text-xs leading-5 text-gray-400">By creating an account, you agree to our </Text>
+          <Link href="/terms-of-use">
+            <Text className="text-xs font-semibold text-blue-600">Terms of Use</Text>
+          </Link>
+          <Text className="text-xs text-gray-400"> and </Text>
+          <Link href="/privacy-policy">
+            <Text className="text-xs font-semibold text-blue-600">Privacy Policy</Text>
+          </Link>
+          <Text className="text-xs text-gray-400">.</Text>
+        </View>
 
         <View nativeID="clerk-captcha" />
       </View>
