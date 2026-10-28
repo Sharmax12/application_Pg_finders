@@ -1,7 +1,7 @@
 import { useAuth, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -164,7 +164,7 @@ export default function SettingsScreen() {
   );
 }
 
-function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
+function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <View className="mb-6">
       <Text className="mb-2 ml-1 text-xs font-bold uppercase tracking-widest text-slate-500">{title}</Text>
