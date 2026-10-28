@@ -264,6 +264,18 @@ export default function SignUpScreen() {
           </Link>
         </View>
 
+        <View className="flex-row flex-wrap justify-center mt-6 px-3">
+          <Text className="text-xs text-gray-400">By creating an account, you agree to our </Text>
+          <Link href="/terms-of-use">
+            <Text className="text-xs text-blue-600 font-semibold">Terms of Use</Text>
+          </Link>
+          <Text className="text-xs text-gray-400"> and acknowledge our </Text>
+          <Link href="/privacy-policy">
+            <Text className="text-xs text-blue-600 font-semibold">Privacy Policy</Text>
+          </Link>
+          <Text className="text-xs text-gray-400">.</Text>
+        </View>
+
         <View nativeID="clerk-captcha" />
       </View>
     </ScrollView>
