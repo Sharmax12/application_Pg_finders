@@ -33,6 +33,14 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "PGFinders uses your photos to add listing and profile images.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",

@@ -55,10 +55,10 @@ export default function ProfileScreen() {
       setIsUpdating(true);
 
       const base64Image = result.assets[0].base64;
-      const uri = result.assets[0].uri;
-      const filename = uri.split("/").pop() || "profile.jpg";
-      const match = /\.(\w+)$/.exec(filename);
-      const mimeType = match ? `image/${match[1]}` : "image/jpeg";
+      if (!base64Image) throw new Error("The selected image could not be read.");
+      const mimeType = result.assets[0].mimeType?.startsWith("image/")
+        ? result.assets[0].mimeType
+        : "image/jpeg";
       const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
       await user?.setProfileImage({ file: dataUrl });
@@ -108,7 +108,7 @@ export default function ProfileScreen() {
           {user.firstName} {user.lastName}
         </Text>
         <Text className="text-gray-500 mt-1">
-          {user.emailAddresses[0].emailAddress}
+          {user.primaryEmailAddress?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? "No email address"}
         </Text>
       </View>
 
@@ -136,7 +136,7 @@ export default function ProfileScreen() {
           label="Help & Support"
           onPress={() =>
             Linking.openURL(
-              "mailto:aniruddhsharma669@gmail.com?subject=Help%20%26%20Support%20-%20Kribb%20App"
+              "mailto:aniruddhsharma669@gmail.com?subject=Help%20%26%20Support%20-%20PGFinders"
             )
           }
         />

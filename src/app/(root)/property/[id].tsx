@@ -96,7 +96,7 @@ export default function PropertyDetailScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert("Delete Property", "Are you sure?", [
+    Alert.alert("Remove PG listing", "Are you sure you want to remove this PG listing?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
@@ -126,10 +126,10 @@ export default function PropertyDetailScreen() {
   };
 
   const handleMarkSold = () => {
-    Alert.alert("Mark as Sold", "Are you sure?", [
+    Alert.alert("Mark unavailable", "Are you sure this PG is no longer available?", [
       { text: "Cancel", style: "cancel" },
       {
-        text: "Mark Sold",
+        text: "Mark unavailable",
         onPress: () => {
           void markPropertySold();
         },
@@ -139,7 +139,7 @@ export default function PropertyDetailScreen() {
 
   const handleContact = () => {
     const supportWhatsApp = (process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ?? "").replace(
-      /\\D/g,
+      /\D/g,
       ""
     );
 
@@ -187,22 +187,36 @@ export default function PropertyDetailScreen() {
   if (!property) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-gray-500">Property not found</Text>
+        <Text className="text-gray-500">PG listing not found</Text>
       </View>
     );
   }
 
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${
-    property.longitude - 0.003
-  }%2C${property.latitude - 0.003}%2C${property.longitude + 0.003}%2C${
-    property.latitude + 0.003
-  }&layer=mapnik&marker=${property.latitude}%2C${property.longitude}`;
+  const safeImages = Array.isArray(property.images)
+    ? property.images.filter((uri) => typeof uri === "string" && uri.length > 0)
+    : [];
+  const description = typeof property.description === "string" ? property.description : "";
+  const coordinates =
+    typeof property.latitude === "number" &&
+    typeof property.longitude === "number" &&
+    Number.isFinite(property.latitude) &&
+    Number.isFinite(property.longitude) &&
+    property.latitude >= -90 &&
+    property.latitude <= 90 &&
+    property.longitude >= -180 &&
+    property.longitude <= 180
+      ? { latitude: property.latitude, longitude: property.longitude }
+      : null;
+  const hasCoordinates = coordinates !== null;
+  const mapUrl = coordinates
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${coordinates.longitude - 0.003
+      }%2C${coordinates.latitude - 0.003}%2C${coordinates.longitude + 0.003}%2C${coordinates.latitude + 0.003
+      }&layer=mapnik&marker=${coordinates.latitude}%2C${coordinates.longitude}`
+    : null;
 
-  const isLongDesc = property.description.length > 150;
+  const isLongDesc = description.length > 150;
   const displayDesc =
-    expanded || !isLongDesc
-      ? property.description
-      : property.description.slice(0, 150) + "...";
+    expanded || !isLongDesc ? description : description.slice(0, 150) + "...";
 
   return (
     <View className="flex-1 bg-white">
@@ -211,7 +225,7 @@ export default function PropertyDetailScreen() {
         <View>
           <View style={{ opacity: property.is_sold ? 0.5 : 1 }}>
             <FlatList
-              data={property.images}
+              data={safeImages}
               keyExtractor={(_, i) => i.toString()}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -237,14 +251,14 @@ export default function PropertyDetailScreen() {
           {/* Image count badge */}
           <View className="absolute bottom-3 right-4 bg-black/50 px-3 py-1 rounded-full">
             <Text className="text-white text-xs font-medium">
-              {activeIndex + 1}/{property.images.length}
+              {activeIndex + 1}/{safeImages.length}
             </Text>
           </View>
 
           {/* Dot indicators */}
-          {property.images.length > 1 && (
+          {safeImages.length > 1 && (
             <View className="absolute bottom-3 left-0 right-0 flex-row justify-center gap-1">
-              {property.images.map((_, i) => (
+              {safeImages.map((_, i) => (
                 <View
                   key={i}
                   className={`h-1.5 rounded-full ${
@@ -292,7 +306,7 @@ export default function PropertyDetailScreen() {
           <View className="flex-row gap-2 mb-3 flex-wrap">
             <View className="bg-blue-50 px-3 py-1 rounded-full">
               <Text className="text-blue-600 text-xs font-semibold capitalize">
-                {property.type}
+                {property.room_type.replace(/_/g, " ")}
               </Text>
             </View>
             {property.is_featured && (
@@ -304,7 +318,7 @@ export default function PropertyDetailScreen() {
             )}
             {property.is_sold && (
               <View className="bg-red-50 px-3 py-1 rounded-full">
-                <Text className="text-red-500 text-xs font-semibold">Sold</Text>
+                <Text className="text-red-500 text-xs font-semibold">Unavailable</Text>
               </View>
             )}
           </View>
@@ -314,7 +328,7 @@ export default function PropertyDetailScreen() {
             {property.title}
           </Text>
           <Text className="text-blue-600 text-xl font-bold mb-4">
-            {formatPrice(property.price)}
+            {typeof property.monthly_rent === "number" ? `${formatPrice(property.monthly_rent)}/month` : "Rent not set"}
           </Text>
 
           {/* Specs Row */}
@@ -332,10 +346,55 @@ export default function PropertyDetailScreen() {
             <SpecItem
               icon="expand-outline"
               label="Area"
-              value={`${property.area_sqft} ft²`}
+              value={typeof property.area_sqft === "number" && property.area_sqft > 0 ? `${property.area_sqft} ft²` : "—"}
             />
-            <SpecItem icon="home-outline" label="Type" value={property.type} />
+            <SpecItem icon="home-outline" label="Room type" value={property.room_type.replace(/_/g, " ")} />
           </View>
+
+          <View className="flex-row flex-wrap gap-2 mb-5">
+            <View className="bg-gray-50 rounded-xl px-3 py-2">
+              <Text className="text-xs text-gray-400">Security deposit</Text>
+              <Text className="text-sm font-semibold text-gray-800">
+                {typeof property.security_deposit === "number"
+                  ? formatPrice(property.security_deposit)
+                  : "Not specified"}
+              </Text>
+            </View>
+            <View className="bg-gray-50 rounded-xl px-3 py-2">
+              <Text className="text-xs text-gray-400">Preference</Text>
+              <Text className="text-sm font-semibold text-gray-800 capitalize">
+                {property.gender_preference === "any" ? "Any" : property.gender_preference}
+              </Text>
+            </View>
+            <View className="bg-gray-50 rounded-xl px-3 py-2">
+              <Text className="text-xs text-gray-400">Food</Text>
+              <Text className="text-sm font-semibold text-gray-800">
+                {property.food_included ? "Included" : "Not included"}
+              </Text>
+            </View>
+          </View>
+
+          {property.available_from && (
+            <View className="flex-row items-center gap-2 mb-5">
+              <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+              <Text className="text-sm text-gray-600">
+                Available from {new Date(`${property.available_from}T00:00:00`).toLocaleDateString()}
+              </Text>
+            </View>
+          )}
+
+          {property.amenities?.length > 0 && (
+            <View className="mb-5">
+              <Text className="text-base font-bold text-gray-900 mb-2">Amenities</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {property.amenities.map((amenity) => (
+                  <View key={amenity} className="bg-blue-50 px-3 py-1.5 rounded-full">
+                    <Text className="text-xs font-medium text-blue-700">{amenity}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* Description */}
           <Text className="text-base font-bold text-gray-900 mb-2">
@@ -370,35 +429,42 @@ export default function PropertyDetailScreen() {
           </View>
 
           {/* Map Preview */}
-          <TouchableOpacity
-            onPress={() => {
-              router.push({
-                pathname: "/(root)/property/map",
-                params: {
-                  latitude: property.latitude,
-                  longitude: property.longitude,
-                  title: property.title,
-                  address: `${property.address}, ${property.city}`,
-                },
-              });
-            }}
-            activeOpacity={0.9}
-            className="rounded-2xl overflow-hidden mb-6"
-            style={{ height: 200 }}
-          >
-            <WebView
-              source={{ uri: mapUrl }}
-              style={{ flex: 1 }}
-              scrollEnabled={false}
-              pointerEvents="none"
-            />
-            <View className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 rounded-full flex-row items-center gap-1">
-              <Ionicons name="expand-outline" size={12} color="#374151" />
-              <Text className="text-gray-600 text-xs font-medium">
-                Tap to expand
+          {hasCoordinates && mapUrl ? (
+            <TouchableOpacity
+              onPress={() => {
+                router.push({
+                  pathname: "/(root)/property/map",
+                  params: {
+                    latitude: String(property.latitude),
+                    longitude: String(property.longitude),
+                    title: property.title,
+                    address: `${property.address}, ${property.city}`,
+                  },
+                });
+              }}
+              activeOpacity={0.9}
+              className="rounded-2xl overflow-hidden mb-6"
+              style={{ height: 200 }}
+            >
+              <WebView
+                source={{ uri: mapUrl }}
+                style={{ flex: 1 }}
+                scrollEnabled={false}
+                pointerEvents="none"
+              />
+              <View className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 rounded-full flex-row items-center gap-1">
+                <Ionicons name="expand-outline" size={12} color="#374151" />
+                <Text className="text-gray-600 text-xs font-medium">Tap to expand</Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <View className="rounded-2xl bg-gray-50 items-center justify-center mb-6 px-5" style={{ height: 120 }}>
+              <Ionicons name="location-outline" size={24} color="#9CA3AF" />
+              <Text className="mt-2 text-center text-sm text-gray-500">
+                Map coordinates have not been added to this listing.
               </Text>
             </View>
-          </TouchableOpacity>
+          )}
 
           {/* Contact Button */}
           <TouchableOpacity
@@ -425,7 +491,7 @@ export default function PropertyDetailScreen() {
                     color="#D97706"
                   />
                   <Text className="text-amber-600 font-semibold">
-                    Mark Sold
+                    Mark unavailable
                   </Text>
                 </TouchableOpacity>
               )}
@@ -443,8 +509,8 @@ export default function PropertyDetailScreen() {
 
       {/* Image Viewer */}
       <ImageViewer
-        images={property.images.map((uri) => ({ uri }))}
-        imageIndex={activeIndex}
+        images={safeImages.map((uri) => ({ uri }))}
+        imageIndex={Math.min(activeIndex, Math.max(0, safeImages.length - 1))}
         visible={imageViewerVisible}
         onRequestClose={() => {
           setImageViewerVisible(false);

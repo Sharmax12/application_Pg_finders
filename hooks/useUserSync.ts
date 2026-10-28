@@ -6,13 +6,16 @@ import { useUserStore } from "../store/userStore";
 export const useUserSync = () => {
   const { user } = useUser();
   const setIsAdmin = useUserStore((state) => state.setIsAdmin);
+  const setIsAdminLoaded = useUserStore((state) => state.setIsAdminLoaded);
   const authSupabase = useSuperbase();
 
   useEffect(() => {
     let isCurrent = true;
+    setIsAdminLoaded(false);
 
     if (!user) {
       setIsAdmin(false);
+      setIsAdminLoaded(true);
       return () => {
         isCurrent = false;
       };
@@ -25,7 +28,10 @@ export const useUserSync = () => {
 
       if (!email) {
         console.error("Cannot sync Clerk user without an email address.");
-        if (isCurrent) setIsAdmin(false);
+        if (isCurrent) {
+          setIsAdmin(false);
+          setIsAdminLoaded(true);
+        }
         return;
       }
 
@@ -39,7 +45,10 @@ export const useUserSync = () => {
         if (lookupError) throw lookupError;
 
         if (existingUser) {
-          if (isCurrent) setIsAdmin(existingUser.is_admin === true);
+          if (isCurrent) {
+            setIsAdmin(existingUser.is_admin === true);
+            setIsAdminLoaded(true);
+          }
           return;
         }
 
@@ -67,15 +76,24 @@ export const useUserSync = () => {
 
           if (concurrentLookupError || !concurrentUser) throw insertError;
 
-          if (isCurrent) setIsAdmin(concurrentUser.is_admin === true);
+          if (isCurrent) {
+            setIsAdmin(concurrentUser.is_admin === true);
+            setIsAdminLoaded(true);
+          }
           return;
         }
 
-        if (isCurrent) setIsAdmin(newUser?.is_admin === true);
+        if (isCurrent) {
+          setIsAdmin(newUser?.is_admin === true);
+          setIsAdminLoaded(true);
+        }
       } catch (error) {
         console.error("Failed to sync Clerk user with Supabase:", error);
         // Fail closed in the UI. Database RLS must independently protect admin actions.
-        if (isCurrent) setIsAdmin(false);
+        if (isCurrent) {
+          setIsAdmin(false);
+          setIsAdminLoaded(true);
+        }
       }
     };
 
@@ -84,5 +102,5 @@ export const useUserSync = () => {
     return () => {
       isCurrent = false;
     };
-  }, [authSupabase, setIsAdmin, user]);
+  }, [authSupabase, setIsAdmin, setIsAdminLoaded, user]);
 };

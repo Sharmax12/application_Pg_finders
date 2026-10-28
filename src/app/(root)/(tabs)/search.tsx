@@ -70,6 +70,7 @@ export default function SearchScreen() {
     const fetchResults = async () => {
       try {
         let query = supabase.from("properties").select(PROPERTY_COLUMNS);
+        query = query.eq("is_sold", false).not("monthly_rent", "is", null);
 
         if (request.search) {
           const escapedSearch = request.search
@@ -81,7 +82,7 @@ export default function SearchScreen() {
         }
 
         if (request.type) {
-          query = query.eq("type", request.type);
+          query = query.eq("room_type", request.type);
         }
 
         if (request.bedrooms !== null) {
@@ -92,11 +93,11 @@ export default function SearchScreen() {
         }
 
         if (request.minPrice !== null) {
-          query = query.gte("price", request.minPrice);
+          query = query.gte("monthly_rent", request.minPrice);
         }
 
         if (request.maxPrice !== null) {
-          query = query.lte("price", request.maxPrice);
+          query = query.lte("monthly_rent", request.maxPrice);
         }
 
         const { data, error: fetchError } = await query.order("created_at", {
@@ -120,7 +121,7 @@ export default function SearchScreen() {
           setResponse({
             key: requestKey,
             results: [],
-            error: "Unable to search properties. Please try again.",
+            error: "Unable to search PGs. Please try again.",
           });
         }
       }
@@ -138,7 +139,7 @@ export default function SearchScreen() {
       {/* Header */}
       <View className="px-5 pt-4 pb-3">
         <Text className="text-2xl font-bold text-gray-900 mb-4">
-          Find Property
+          Find PGs
         </Text>
 
         {/* Search Bar + Filter Button */}
@@ -156,7 +157,7 @@ export default function SearchScreen() {
             <Ionicons name="search-outline" size={18} color="#9CA3AF" />
             <TextInput
               className="flex-1 py-3 text-gray-800"
-              placeholder="Search by title or city..."
+              placeholder="Search PGs, localities, colleges..."
               placeholderTextColor="#9CA3AF"
               value={search}
               onChangeText={setSearch}
@@ -294,7 +295,7 @@ export default function SearchScreen() {
                 <>
                   <Ionicons name="search-outline" size={48} color="#D1D5DB" />
                   <Text className="text-gray-400 mt-4 text-base">
-                    No properties found
+                    No PGs found
                   </Text>
                   <Text className="text-gray-300 text-sm mt-1">
                     Try a different search or adjust filters

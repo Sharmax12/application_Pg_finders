@@ -40,11 +40,15 @@ export default function HomeScreen() {
               .from("properties")
               .select(PROPERTY_COLUMNS)
               .eq("is_featured", true)
+              .eq("is_sold", false)
+              .not("monthly_rent", "is", null)
               .order("created_at", { ascending: false }),
             supabase
               .from("properties")
               .select(PROPERTY_COLUMNS)
               .eq("is_featured", false)
+              .eq("is_sold", false)
+              .not("monthly_rent", "is", null)
               .order("created_at", { ascending: false }),
           ]);
 
@@ -99,7 +103,7 @@ export default function HomeScreen() {
                 resizeMode="contain"
               />
               <View className="items-end">
-                <Text className="text-gray-500 text-xs">Good morning 👋</Text>
+                <Text className="text-gray-500 text-xs">Find your next PG 👋</Text>
                 <Text className="text-gray-900 text-base font-bold">
                   {user?.firstName ?? "User"}
                 </Text>
@@ -120,7 +124,7 @@ export default function HomeScreen() {
             >
               <Ionicons name="search-outline" size={18} color="#9CA3AF" />
               <Text className="text-gray-400 text-sm flex-1">
-                Search properties, cities...
+                Search PGs, neighbourhoods...
               </Text>
               <TouchableOpacity
                 onPress={() =>
@@ -135,7 +139,7 @@ export default function HomeScreen() {
             {/* Featured Section */}
             <View className="mb-6">
               <Text className="text-gray-900 text-lg font-bold px-5 mb-4">
-                Featured
+                Featured PGs
               </Text>
 
               {loading ? (
@@ -170,7 +174,7 @@ export default function HomeScreen() {
 
             {/* Recommended Header */}
             <Text className="text-gray-900 text-lg font-bold px-5 mb-4">
-              Recommended
+              Recommended PGs
             </Text>
           </View>
         }
@@ -183,7 +187,7 @@ export default function HomeScreen() {
           !loading && !error
             ? () => (
                 <View className="items-center py-10">
-                  <Text className="text-gray-400">No properties found</Text>
+                  <Text className="text-gray-400">No PGs found yet</Text>
                 </View>
               )
             : undefined

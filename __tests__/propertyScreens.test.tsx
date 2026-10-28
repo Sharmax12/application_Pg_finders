@@ -15,6 +15,7 @@ type QueryRecord = {
   gte: [string, number][];
   lte: [string, number][];
   or: string[];
+  not: [string, string, string][];
 };
 
 type Query = {
@@ -22,6 +23,7 @@ type Query = {
   eq: (column: string, value: string | number | boolean) => Query;
   gte: (column: string, value: number) => Query;
   lte: (column: string, value: number) => Query;
+  not: (column: string, operator: string, value: string) => Query;
   or: (expression: string) => Query;
   order: () => Promise<Result>;
 };
@@ -32,7 +34,7 @@ const renderScreen = (element: ReactElement) => Promise.resolve(render(element))
 const completeEvent = (event: unknown) => Promise.resolve(event);
 
 const mockFrom = jest.fn(() => {
-  const record: QueryRecord = { eq: [], gte: [], lte: [], or: [] };
+  const record: QueryRecord = { eq: [], gte: [], lte: [], or: [], not: [] };
   mockQueries.push(record);
 
   let query: Query;
@@ -48,6 +50,10 @@ const mockFrom = jest.fn(() => {
     },
     lte: (column, value) => {
       record.lte.push([column, value]);
+      return query;
+    },
+    not: (column, operator, value) => {
+      record.not.push([column, operator, value]);
       return query;
     },
     or: (expression) => {
@@ -102,9 +108,16 @@ const makeProperty = (overrides: Partial<Property> = {}): Property => ({
   id: "property-1",
   title: "Cedar House",
   description: "A comfortable home",
-  price: 5000000,
-  type: "house",
-  bedrooms: 4,
+  price: 9500,
+  type: "studio",
+  room_type: "private_room",
+  monthly_rent: 9500,
+  security_deposit: 10000,
+  gender_preference: "any",
+  food_included: true,
+  amenities: ["Wi-Fi"],
+  available_from: "2026-11-01",
+  bedrooms: 1,
   bathrooms: 2,
   area_sqft: 1200,
   address: "10 Main Street",
@@ -137,12 +150,12 @@ afterEach(() => {
 describe("HomeScreen", () => {
   it("fetches and renders featured and recommended properties", async () => {
     enqueueResult({ data: [makeProperty({ is_featured: true })], error: null });
-    enqueueResult({ data: [makeProperty({ title: "Recommended home" })], error: null });
+    enqueueResult({ data: [makeProperty({ title: "Recommended PG" })], error: null });
 
     const screen = await renderScreen(<HomeScreen />);
 
     expect(await screen.findByText("Cedar House")).toBeTruthy();
-    expect(await screen.findByText("Recommended home")).toBeTruthy();
+    expect(await screen.findByText("Recommended PG")).toBeTruthy();
     expect(mockQueries[0].eq).toContainEqual(["is_featured", true]);
     expect(mockQueries[1].eq).toContainEqual(["is_featured", false]);
   });
@@ -153,7 +166,7 @@ describe("HomeScreen", () => {
 
     const screen = await renderScreen(<HomeScreen />);
 
-    expect(await screen.findByText("No properties found")).toBeTruthy();
+    expect(await screen.findByText("No PGs found yet")).toBeTruthy();
   });
 
   it("surfaces home fetch failures and allows retry", async () => {
@@ -174,11 +187,11 @@ describe("HomeScreen", () => {
 });
 
 describe("SearchScreen", () => {
-  it("searches title and city using escaped PostgREST input", async () => {
+  it("searches PG title and city using escaped PostgREST input", async () => {
     enqueueResult({ data: [], error: null });
 
     const screen = await renderScreen(<SearchScreen />);
-    const input = screen.getByPlaceholderText("Search by title or city...");
+    const input = screen.getByPlaceholderText("Search PGs, localities, colleges...");
     await completeEvent(fireEvent.changeText(input, 'Cedar", (West)'));
 
     await waitFor(() => {
@@ -189,12 +202,12 @@ describe("SearchScreen", () => {
     expect(mockQueries[1].or[0]).toContain('city.ilike."%');
   });
 
-  it("applies property type, 4+ bedrooms, and inclusive price bounds", async () => {
+  it("applies room type, 4+ bedrooms, and inclusive monthly rent bounds", async () => {
     const filters = useFilterStore.getState();
-    filters.setType("house");
+    filters.setType("private_room");
     filters.setBedrooms(4);
     filters.setMinPrice(0);
-    filters.setMaxPrice(10000000);
+    filters.setMaxPrice(10000);
     enqueueResult({ data: [], error: null });
 
     await renderScreen(<SearchScreen />);
@@ -202,10 +215,10 @@ describe("SearchScreen", () => {
     await waitFor(() => {
       expect(mockQueries).toHaveLength(1);
     });
-    expect(mockQueries[0].eq).toContainEqual(["type", "house"]);
+    expect(mockQueries[0].eq).toContainEqual(["room_type", "private_room"]);
     expect(mockQueries[0].gte).toContainEqual(["bedrooms", 4]);
-    expect(mockQueries[0].gte).toContainEqual(["price", 0]);
-    expect(mockQueries[0].lte).toContainEqual(["price", 10000000]);
+    expect(mockQueries[0].gte).toContainEqual(["monthly_rent", 0]);
+    expect(mockQueries[0].lte).toContainEqual(["monthly_rent", 10000]);
   });
 
   it("uses an exact match for bedroom counts below four", async () => {
@@ -232,17 +245,17 @@ describe("SearchScreen", () => {
     const screen = await renderScreen(<SearchScreen />);
     expect(await screen.findByText("Searching...")).toBeTruthy();
     resolveRequest({ data: [], error: null });
-    expect(await screen.findByText("No properties found")).toBeTruthy();
+    expect(await screen.findByText("No PGs found")).toBeTruthy();
 
     enqueueResult({ data: null, error: { message: "Request failed" } });
     await completeEvent(
       fireEvent.changeText(
-        screen.getByPlaceholderText("Search by title or city..."),
+        screen.getByPlaceholderText("Search PGs, localities, colleges..."),
         "Pune"
       )
     );
     expect(
-      await screen.findByText("Unable to search properties. Please try again.")
+      await screen.findByText("Unable to search PGs. Please try again.")
     ).toBeTruthy();
   });
 
@@ -258,7 +271,7 @@ describe("SearchScreen", () => {
     const screen = await renderScreen(<SearchScreen />);
     await completeEvent(
       fireEvent.changeText(
-        screen.getByPlaceholderText("Search by title or city..."),
+        screen.getByPlaceholderText("Search PGs, localities, colleges..."),
         "new"
       )
     );

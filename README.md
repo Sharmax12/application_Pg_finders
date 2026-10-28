@@ -4,7 +4,7 @@
 
 PGFinders is a mobile-first product designed to make finding and comparing paying-guest (PG) accommodation easier for students and young professionals. The goal is to bring important information—such as rent, location, amenities, food options, and house rules—into one place so people can make better-informed decisions.
 
-> **Project Status:** Active development. This repository provides the Expo/React Native app foundation and Clerk authentication routing. PG discovery, listing management, filters, and other product capabilities remain planned until their implementation is complete.
+> **Project Status:** Active development. The app includes Clerk sign-in, listing discovery/search, saved listings, detail pages, and administrator listing creation. The PG-rental schema and RLS migration in `supabase/migrations/` must be applied to the target Supabase project before the updated app is deployed. Existing sale-oriented rows are deliberately not treated as monthly rent.
 
 ---
 
@@ -126,6 +126,38 @@ key.
 
 Only publishable/client keys belong in `EXPO_PUBLIC_*` variables. Never put a Clerk secret key or Supabase secret/service-role key in a mobile app.
 
+### Apply the database security and PG-rental migration
+
+Before deploying an app build containing the PG fields, review and apply
+`supabase/migrations/20261027000000_security_policies.sql` to the intended
+Supabase project using the Supabase SQL Editor or your normal migration process.
+It adds monthly rent, deposit, room type, resident preference, food, amenities,
+and availability fields. It also replaces the policies shown in the audit
+screenshot with Clerk-aware RLS, prevents users from self-assigning
+`is_admin`, and restricts writes to listing rows and property images to admins.
+
+The migration intentionally leaves legacy `price` values unmigrated into
+`monthly_rent`: a sale price must never be guessed to be a monthly rent.
+Legacy rows remain hidden from PG discovery until their actual rent details are
+reviewed and entered. If a database table/column name differs from the current
+app schema, stop and reconcile the migration rather than disabling RLS.
+
+**Promote an administrator only from the trusted Supabase SQL Editor**, after
+the user has signed in once and their `public.users` row exists. Replace the
+placeholder with the Clerk user ID from the Clerk dashboard:
+
+```sql
+UPDATE public.users
+SET is_admin = true
+WHERE clerk_id = 'user_replace_with_clerk_user_id';
+```
+
+Check that exactly one row was updated. Never expose a service-role key in the
+mobile app. Listing images in the `property-images` bucket are intentionally
+publicly readable; uploads, changes, and deletion are admin-only. Do not apply
+a broad `storage.objects` write policy that overrides these restrictions.
+
+
 **Security reminder:**
 - Never commit `.env` files containing credentials.
 - Never expose Clerk secret keys in a mobile application.
@@ -224,9 +256,11 @@ Security is essential when handling accommodation listings and user enquiries.
 
 - Keep secret API keys on trusted servers.
 - Never ship a Supabase service-role key in the mobile application.
-- Enforce data access permissions at the database or server layer.
+- Keep row-level security enabled on `properties`, `saved_properties`, `users`, and `storage.objects`.
+- Treat the client-side admin state as display logic only; the database policies are the authorization boundary.
+- Validate listing data in the app and enforce critical access rules again in Postgres.
 - Collect only the personal information required by the product.
-- Validate listing data and provide ways to report inaccurate information.
+- Have a verified per-listing owner/manager enquiry workflow before launch; the current WhatsApp contact is global PGFinders support, not an owner contact.
 
 ---
 
