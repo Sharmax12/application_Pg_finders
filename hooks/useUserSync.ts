@@ -1,16 +1,25 @@
-import { useUser } from "@clerk/expo";
+import { useAuth, useUser } from "@clerk/expo";
 import { useEffect } from "react";
 import { useSuperbase } from "./useSuperbase";
 import { useUserStore } from "../store/userStore";
 
 export const useUserSync = () => {
-  const { user } = useUser();
+  const { isLoaded: isUserLoaded, user } = useUser();
+  const { isLoaded: isAuthLoaded } = useAuth();
   const setIsAdmin = useUserStore((state) => state.setIsAdmin);
   const setIsAdminLoaded = useUserStore((state) => state.setIsAdminLoaded);
   const authSupabase = useSuperbase();
 
   useEffect(() => {
     let isCurrent = true;
+
+    if (!isAuthLoaded || !isUserLoaded) {
+      setIsAdminLoaded(false);
+      return () => {
+        isCurrent = false;
+      };
+    }
+
     setIsAdminLoaded(false);
 
     if (!user) {
@@ -102,5 +111,12 @@ export const useUserSync = () => {
     return () => {
       isCurrent = false;
     };
-  }, [authSupabase, setIsAdmin, setIsAdminLoaded, user]);
+  }, [
+    authSupabase,
+    isAuthLoaded,
+    isUserLoaded,
+    setIsAdmin,
+    setIsAdminLoaded,
+    user,
+  ]);
 };
