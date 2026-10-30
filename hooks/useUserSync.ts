@@ -3,6 +3,27 @@ import { useEffect } from "react";
 import { useSuperbase } from "./useSuperbase";
 import { useUserStore } from "../store/userStore";
 
+type SupabaseSyncError = {
+  code?: string;
+  message?: string;
+  details?: string;
+  hint?: string;
+};
+
+function getSupabaseSyncError(error: unknown): SupabaseSyncError {
+  if (typeof error !== "object" || error === null) return {};
+
+  const candidate = error as Record<string, unknown>;
+  return {
+    code: typeof candidate.code === "string" ? candidate.code : undefined,
+    message:
+      typeof candidate.message === "string" ? candidate.message : undefined,
+    details:
+      typeof candidate.details === "string" ? candidate.details : undefined,
+    hint: typeof candidate.hint === "string" ? candidate.hint : undefined,
+  };
+}
+
 export const useUserSync = () => {
   const { isLoaded: isUserLoaded, user } = useUser();
   const { isLoaded: isAuthLoaded } = useAuth();
@@ -97,7 +118,10 @@ export const useUserSync = () => {
           setIsAdminLoaded(true);
         }
       } catch (error) {
-        console.error("Failed to sync Clerk user with Supabase:", error);
+        console.error("Failed to sync Clerk user with Supabase:", {
+          error,
+          ...getSupabaseSyncError(error),
+        });
         // Fail closed in the UI. Database RLS must independently protect admin actions.
         if (isCurrent) {
           setIsAdmin(false);
