@@ -1,4 +1,4 @@
-import { SymbolView } from "expo-symbols";
+import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { NativeTabs } from "expo-router/native-tabs";
 import { Platform } from "react-native";
@@ -19,7 +19,7 @@ function AndroidTabs() {
         options={{
           title: "Home",
           tabBarIcon: ({ color }) => (
-            <SymbolView name="home" tintColor={color} size={24} />
+            <Ionicons name="home" color={color} size={24} />
           ),
         }}
       />
@@ -28,26 +28,27 @@ function AndroidTabs() {
         options={{
           title: "Search",
           tabBarIcon: ({ color }) => (
-            <SymbolView name="search" tintColor={color} size={24} />
+            <Ionicons name="search" color={color} size={24} />
           ),
         }}
       />
-      <Tabs.Screen
-        name="create"
-        options={{
-          href: isAdmin ? undefined : null,
-          title: "Create Property",
-          tabBarIcon: ({ color }) => (
-            <SymbolView name="add_circle" tintColor={color} size={24} />
-          ),
-        }}
-      />
+      {isAdmin && (
+        <Tabs.Screen
+          name="create"
+          options={{
+            title: "Create Property",
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="add-circle" color={color} size={24} />
+            ),
+          }}
+        />
+      )}
       <Tabs.Screen
         name="saved"
         options={{
           title: "Saved",
           tabBarIcon: ({ color }) => (
-            <SymbolView name="favorite" tintColor={color} size={24} />
+            <Ionicons name="heart" color={color} size={24} />
           ),
         }}
       />
@@ -56,7 +57,7 @@ function AndroidTabs() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color }) => (
-            <SymbolView name="person" tintColor={color} size={24} />
+            <Ionicons name="person" color={color} size={24} />
           ),
         }}
       />
