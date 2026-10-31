@@ -16,9 +16,8 @@
     "android": {
       "package": "com.pgfinders.app",
       "adaptiveIcon": {
-        "backgroundColor": "#2563EB",
-        "foregroundImage": "./assets/images/pgfinders-icon.png",
-        "monochromeImage": "./assets/images/pgfinders-icon.png"
+        "backgroundColor": "#FDFBF5",
+        "foregroundImage": "./assets/images/pgfinders-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -50,7 +49,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#2563EB",
+          "backgroundColor": "#FDFBF5",
           "image": "./assets/images/pgfinders-splash.png",
           "imageWidth": 160
         }
