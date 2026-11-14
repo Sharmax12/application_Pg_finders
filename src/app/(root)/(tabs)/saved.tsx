@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -16,6 +16,7 @@ import { PROPERTY_COLUMNS, type Property } from "../../../../types/types";
 
 export default function Saved() {
   const { userId } = useAuth();
+  const router = useRouter();
   const authSupabase = useSuperbase();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,6 +133,22 @@ export default function Saved() {
             <View className="flex-1 items-center justify-center py-16">
               <ActivityIndicator size="large" color="#2563EB" />
               <Text className="text-gray-500 mt-3">Loading saved places…</Text>
+            </View>
+          ) : !userId ? (
+            <View className="items-center justify-center py-16">
+              <Ionicons name="heart-outline" size={42} color="#9CA3AF" />
+              <Text className="mt-3 text-lg font-semibold text-gray-900">
+                Sign in to save PGs
+              </Text>
+              <Text className="mt-1 max-w-xs text-center text-gray-500">
+                Browse freely, then sign in when you are ready to keep a shortlist.
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push("/sign-in")}
+                className="mt-4 rounded-xl bg-blue-600 px-5 py-3"
+              >
+                <Text className="font-semibold text-white">Sign in</Text>
+              </TouchableOpacity>
             </View>
           ) : error ? (
             <View className="items-center justify-center py-16">

@@ -4,7 +4,9 @@
 
 PGFinders is a mobile-first product designed to make finding and comparing paying-guest (PG) accommodation easier for students and young professionals. The goal is to bring important information—such as rent, location, amenities, food options, and house rules—into one place so people can make better-informed decisions.
 
-> **Project Status:** Active development. The app includes Clerk sign-in, listing discovery/search, saved listings, detail pages, and administrator listing creation. The PG-rental schema and RLS migration in `supabase/migrations/` must be applied to the target Supabase project before the updated app is deployed. Existing sale-oriented rows are deliberately not treated as monthly rent.
+> **Project Status:** Active development. The app includes Clerk sign-in, guest listing discovery, PG search and filters, saved listings, detail pages, and administrator listing creation. Apply every migration in `supabase/migrations/` to the target Supabase project before deploying the matching app build. Existing sale-oriented rows are deliberately not treated as monthly rent.
+
+The public `pgfinders.com` homepage is currently a marketing and early-access site. This repository contains the Expo mobile app (with Expo web support), not the source for that landing page.
 
 ---
 
@@ -41,7 +43,7 @@ These are product goals, not a claim that all features are currently implemented
 | NativeWind | Utility-first styling |
 | Tailwind CSS | Styling utilities |
 | Zustand | Client-side state management |
-| Supabase JS | Database integration foundation |
+| Supabase JS | Listing and saved-property data access |
 
 ---
 
@@ -128,13 +130,14 @@ Only publishable/client keys belong in `EXPO_PUBLIC_*` variables. Never put a Cl
 
 ### Apply the database security and PG-rental migration
 
-Before deploying an app build containing the PG fields, review and apply
-`supabase/migrations/20261027000000_security_policies.sql` to the intended
-Supabase project using the Supabase SQL Editor or your normal migration process.
-It adds monthly rent, deposit, room type, resident preference, food, amenities,
-and availability fields. It also replaces the policies shown in the audit
-screenshot with Clerk-aware RLS, prevents users from self-assigning
-`is_admin`, and restricts writes to listing rows and property images to admins.
+Before deploying an app build containing the PG fields, review and apply all
+migrations under `supabase/migrations/` to the intended Supabase project using
+the Supabase CLI or your normal migration process. The PG schema and security
+migration adds monthly rent, deposit, room type, resident preference, food,
+amenities, and availability fields; configures Clerk-aware RLS; prevents users
+from self-assigning `is_admin`; and restricts writes to listing rows and
+property images to administrators. The discovery migration limits public reads
+to available PG listings and grants clients only the fields used by the app.
 
 The migration intentionally leaves legacy `price` values unmigrated into
 `monthly_rent`: a sale price must never be guessed to be a monthly rent.
@@ -195,11 +198,10 @@ Some native modules may require an Expo development build instead of Expo Go.
 The current application entry flow uses Clerk authentication.
 
 1. `src/app/_layout.tsx` wraps the application with `ClerkProvider`.
-2. `src/app/index.tsx` waits for authentication state to load.
-3. Authenticated users are redirected to the main tab area.
-4. Unauthenticated users see a welcome screen with a prominent account-creation action and a separate sign-in link.
-5. `src/app/(auth)/sign-up.tsx` creates the account and verifies the email address. Both sign-in and sign-up screens link to the legal pages.
-6. Signed-in users can open Settings from Profile. The public `/privacy-policy` and `/terms-of-use` routes are also accessible before signing in.
+2. `src/app/index.tsx` waits for authentication state to load and offers guest browsing, sign-up, and sign-in.
+3. Guests and signed-in users can browse active PG listings; saving listings requires an account.
+4. `src/app/(auth)/sign-up.tsx` creates the account and verifies the email address. Both sign-in and sign-up screens link to the legal pages.
+5. Signed-in users can manage their shortlist and account from the tabs. The public `/privacy-policy` and `/terms-of-use` routes are also accessible before signing in.
 
 Ensure the Clerk publishable key is configured before launching the application.
 

@@ -1,29 +1,53 @@
 # PGFinders: Product and Technical Review
 
-**Review date:** 27 October 2026  
-**Repository:** `Sharmax12/application_Pg_finders`  
+**Initial review date:** 27 October 2026
+**Follow-up review:** 14 November 2026
+**Repository:** `Sharmax12/application_Pg_finders`
 **Purpose:** Focused route from the current Expo foundation to a trustworthy PG-accommodation pilot.
+
+The findings below record the initial review unless the follow-up section says
+otherwise. The live Supabase project and production deployment are not available
+from this repository checkout, so migration changes still need to be reviewed
+and applied to the intended project.
+
+## Follow-up review — 14 November 2026
+
+- Confirmed this repository is an Expo SDK 58 app with native mobile and Expo
+  web support. The public `pgfinders.com` homepage currently serves a marketing
+  and early-access page; its source is not in this repository.
+- Added guest access to active PG discovery. Sign-in remains available for
+  saved listings and account features.
+- Search now debounces text input, searches listing names and locations, pages
+  results, supports food and resident-preference filters, and sorts by rent or
+  recency. Home feed requests are capped at eight rows per section.
+- Added validation for rent ranges and clear guest states on the Saved and
+  Profile tabs.
+- Added a database migration that restricts public reads to active PG rows,
+  grants clients only the columns requested by the app, and indexes the active
+  discovery order. This has not been applied to a live Supabase project.
+- Remaining product gaps include owner-managed accounts and listings, listing
+  moderation/reporting, per-listing contact details, and production device QA.
 
 ## Executive decision
 
-Keep React Native + Expo. The app already uses Expo Router, TypeScript, Clerk, Supabase and Zustand. A Flutter or separate native rewrite would add migration work without solving the current blockers: the product model is still generic real estate, several key screens are incomplete, and the database's production access policies are not versioned in this repository.
+Keep React Native + Expo. The app already uses Expo Router, TypeScript, Clerk, Supabase and Zustand. The client now has a PG-rental model and discovery flow. The underlying database still uses a legacy `properties` table, and production schema, policy, supply quality and owner operations must be verified before launch.
 
 The first launch should be a focused PG discovery and enquiry product, not a full property-management suite or social marketplace.
 
 ## What is present and what is not
 
-### Confirmed in source
+### Confirmed in current source
 
 - Expo SDK 58, React Native 0.88, React 19.3 and TypeScript are declared in `package.json`.
 - Expo Router provides auth routes, tabs, search and property details.
 - Clerk is used for the mobile session; Supabase JS is used for database access.
-- Home and search load property rows; search filters by title/city, property type, bedroom count and price.
+- Home and search allow guest discovery of active PG listings. Search filters by listing/location text, room type, bedrooms, monthly rent, food and PG preference; it pages and sorts results.
 - Property detail includes photos, map preview, save, contact and admin actions.
 - Automated tests exist for the home/search flow and filter modal.
-- The Saved and Profile screens were placeholders before this review branch; the branch adds saved-list loading and a Clerk-backed editable-name/sign-out screen. Create Property remains a placeholder pending the PG schema and owner-permission rules.
-- The current data vocabulary is generic real estate: `is_sold`, `bedrooms`, `bathrooms`, `area_sqft`, property types such as apartment/house/villa/studio, and price presets in lakhs/crores. That does not match PG rental discovery.
-- This branch now sets the Expo display name, slug and URI scheme to `PGFinders` / `pgfinders`, aligns the npm package and lockfile names, and changes the generic “Find your dream home” sign-up copy. The current image assets are still named `kribb.*`, so final brand artwork should be confirmed before store submission. Stable iOS bundle ID and Android package identifiers remain unset and must be selected before production builds.
-- The repository did not contain Supabase migrations/schema/RLS policy files or a GitHub Actions workflow at review time. The live database configuration therefore cannot be confirmed from source alone.
+- Saved and Profile tabs support signed-in users and explain the account requirement to guests. Admin listing creation includes PG-specific fields and image upload.
+- The underlying `properties` table keeps legacy columns such as `price`, `type`, `bedrooms`, `bathrooms` and `area_sqft` alongside PG-rental fields. Discovery uses `monthly_rent` and does not infer rent from legacy sale prices.
+- Expo display name, slug, URI scheme, iOS bundle ID and Android package are configured as `PGFinders` / `pgfinders` / `com.pgfinders.app`.
+- Versioned migrations and a GitHub Actions workflow are present. Their application to the production Supabase project and the current CI result still need confirmation.
 
 ### Changed on the review branch
 
@@ -170,7 +194,7 @@ Use check constraints for non-negative prices/deposits and valid statuses, forei
 
 ## Build/release checklist
 
-Before store submission, replace generic app metadata (`name: my-app`, `slug: my-app`, `scheme: myapp`) with the final PGFinders identity. Confirm whether the project is already linked to an Expo/EAS project before changing the slug. Set stable, unique `ios.bundleIdentifier` and `android.package` values once the intended publisher identifiers are known. Confirm icons, splash screen, deep links, privacy/support URLs, permission prompts and store metadata. Then create development, preview and production build profiles, and test signed builds outside Expo Go.
+App identity and bundle/package identifiers are set in `app.json`. Confirm that the identifiers match the intended store accounts and EAS project. Review icons, splash screen, deep links, privacy/support URLs, permission prompts and store metadata. Apply and verify all migrations against the intended Supabase project. Then create development, preview and production builds and test signed builds on physical Android and iOS devices.
 
 ## Things not verified by this repository review
 
