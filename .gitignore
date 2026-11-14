@@ -4,6 +4,9 @@ node_modules/
 dist/
 coverage/
 
+# Supabase CLI local project state (project refs and machine-local metadata)
+/supabase/.temp/
+
 # Local environment and secrets
 .env
 .env.*

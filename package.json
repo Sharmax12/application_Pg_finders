@@ -49,6 +49,9 @@
     "jest-expo": "~58.0.13",
     "typescript": "~6.0.3"
   },
+  "overrides": {
+    "zod": "4.6.7"
+  },
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",

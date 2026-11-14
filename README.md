@@ -129,12 +129,18 @@ Only publishable/client keys belong in `EXPO_PUBLIC_*` variables. Never put a Cl
 ### Apply the database security and PG-rental migration
 
 Before deploying an app build containing the PG fields, review and apply
-`supabase/migrations/20261027000000_security_policies.sql` to the intended
-Supabase project using the Supabase SQL Editor or your normal migration process.
-It adds monthly rent, deposit, room type, resident preference, food, amenities,
-and availability fields. It also replaces the policies shown in the audit
-screenshot with Clerk-aware RLS, prevents users from self-assigning
-`is_admin`, and restricts writes to listing rows and property images to admins.
+both migrations in timestamp order to the intended Supabase project:
+
+1. `supabase/migrations/20261027000000_security_policies.sql`
+2. `supabase/migrations/20261028000000_restrict_legacy_user_policies.sql`
+
+Use the Supabase SQL Editor or your normal migration process. The first migration
+adds monthly rent, deposit, room type, resident preference, food, amenities, and
+availability fields. It also sets Clerk-aware RLS, prevents users from
+self-assigning `is_admin`, and restricts property and image writes to admins.
+The follow-up migration adds restrictive owner guards for `users` and
+`saved_properties`, so any unrecognised legacy permissive policy cannot widen
+access to another user's private rows.
 
 The migration intentionally leaves legacy `price` values unmigrated into
 `monthly_rent`: a sale price must never be guessed to be a monthly rent.
