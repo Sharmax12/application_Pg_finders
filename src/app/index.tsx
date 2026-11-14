@@ -41,20 +41,26 @@ export default function WelcomeScreen() {
         <View>
           <TouchableOpacity
             accessibilityRole="button"
-            onPress={() => router.push("/sign-up")}
+            onPress={() => router.push("/(root)/(tabs)")}
             className="flex-row items-center justify-center rounded-2xl bg-blue-600 py-4"
           >
-            <Text className="text-base font-bold text-white">Create your account</Text>
+            <Text className="text-base font-bold text-white">Explore PGs</Text>
             <Ionicons name="arrow-forward" size={18} color="white" style={{ marginLeft: 8 }} />
           </TouchableOpacity>
           <View className="mt-5 flex-row items-center justify-center">
+            <Text className="text-sm text-slate-500">Want to save a shortlist? </Text>
+            <Link href="/sign-up">
+              <Text className="text-sm font-bold text-blue-600">Create an account</Text>
+            </Link>
+          </View>
+          <View className="mt-2 flex-row items-center justify-center">
             <Text className="text-sm text-slate-500">Already have an account? </Text>
             <Link href="/sign-in">
               <Text className="text-sm font-bold text-blue-600">Sign in</Text>
             </Link>
           </View>
           <View className="mt-7 flex-row flex-wrap items-center justify-center">
-            <Text className="text-center text-xs leading-5 text-slate-400">By continuing, you agree to our </Text>
+            <Text className="text-center text-xs leading-5 text-slate-400">By using PGFinders, you agree to our </Text>
             <Link href="/terms-of-use">
               <Text className="text-xs font-semibold text-slate-600">Terms of Use</Text>
             </Link>

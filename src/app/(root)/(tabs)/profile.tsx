@@ -75,10 +75,42 @@ export default function ProfileScreen() {
     }
   };
 
-  if (!isLoaded || !user) {
+  if (!isLoaded) {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center">
         <ActivityIndicator size="large" color="#3B82F6" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!user) {
+    return (
+      <SafeAreaView className="flex-1 bg-white px-6">
+        <View className="flex-1 items-center justify-center">
+          <View className="h-20 w-20 items-center justify-center rounded-3xl bg-blue-50">
+            <Ionicons name="person-outline" size={38} color="#2563EB" />
+          </View>
+          <Text className="mt-5 text-2xl font-bold text-gray-900">
+            Make your shortlist yours
+          </Text>
+          <Text className="mt-2 max-w-sm text-center text-base leading-6 text-gray-500">
+            Sign in to save PGs, compare them later and manage your account.
+          </Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => router.push("/sign-in")}
+            className="mt-7 w-full items-center rounded-2xl bg-blue-600 py-4"
+          >
+            <Text className="font-bold text-white">Sign in</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => router.push("/sign-up")}
+            className="mt-3 w-full items-center rounded-2xl border border-blue-200 bg-white py-4"
+          >
+            <Text className="font-bold text-blue-700">Create an account</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }

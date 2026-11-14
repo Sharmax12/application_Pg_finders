@@ -1,4 +1,5 @@
 import { useSavedProperty } from "../../../../hooks/useSavedProperty";
+import { useAuth } from "@clerk/expo";
 import { useSuperbase as useSupabase } from "../../../../hooks/useSuperbase";
 import ImageViewer from "../../../../components/ImageViewer";
 import { formatPrice } from "../../../../lib/utils";
@@ -29,6 +30,7 @@ const { width } = Dimensions.get("window");
 
 export default function PropertyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { userId } = useAuth();
   const router = useRouter();
   const isAdmin = useUserStore((state) => state.isAdmin);
 
@@ -165,6 +167,18 @@ export default function PropertyDetailScreen() {
   };
 
   const handleToggleSave = () => {
+    if (!userId) {
+      Alert.alert(
+        "Sign in to save this PG",
+        "Create a free account to keep a shortlist and come back to it later.",
+        [
+          { text: "Not now", style: "cancel" },
+          { text: "Sign in", onPress: () => router.push("/sign-in") },
+        ]
+      );
+      return;
+    }
+
     void toggleSave().catch((error) => {
       console.error("Failed to update saved property:", error);
       Alert.alert("Unable to update saved properties", "Please try again.");

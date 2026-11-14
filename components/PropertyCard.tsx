@@ -1,4 +1,5 @@
 import { useSavedProperty } from "../hooks/useSavedProperty";
+import { useAuth } from "@clerk/expo";
 import { formatPrice } from "../lib/utils";
 import type { Property } from "../types/types";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,12 +22,25 @@ export default function PropertyCard({
   showSave?: boolean;
 }) {
   const router = useRouter();
+  const { userId } = useAuth();
   const { isSaved, saveLoading, toggleSave } = useSavedProperty(
     property.id,
     onUnsave
   );
 
   const handleToggleSave = () => {
+    if (!userId) {
+      Alert.alert(
+        "Sign in to save PGs",
+        "Create a free account to keep your shortlist.",
+        [
+          { text: "Not now", style: "cancel" },
+          { text: "Sign in", onPress: () => router.push("/sign-in") },
+        ]
+      );
+      return;
+    }
+
     void toggleSave().catch((error) => {
       console.error("Failed to update saved property:", error);
       Alert.alert(

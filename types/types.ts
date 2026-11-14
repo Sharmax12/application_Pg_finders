@@ -1,5 +1,5 @@
 export const PROPERTY_COLUMNS =
-  "id,title,description,price,type,room_type,monthly_rent,security_deposit,gender_preference,food_included,amenities,available_from,bedrooms,bathrooms,area_sqft,address,city,latitude,longitude,images,is_featured,is_sold,created_at";
+  "id,title,description,room_type,monthly_rent,security_deposit,gender_preference,food_included,amenities,available_from,bedrooms,bathrooms,area_sqft,address,city,latitude,longitude,images,is_featured,is_sold,created_at";
 
 export type PgRoomType =
   | "single_room"
@@ -11,9 +11,9 @@ export interface Property {
   id: string;
   title: string;
   description: string;
-  // Legacy price/type are retained for compatibility while existing rows are migrated.
-  price: number;
-  type: string;
+  // Legacy sale-schema columns remain in the database during migration.
+  price?: number;
+  type?: string;
   room_type: PgRoomType | string;
   monthly_rent: number | null;
   security_deposit: number | null;

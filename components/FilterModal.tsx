@@ -8,7 +8,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { useFilterStore, PropertyType } from "../store/filterStore";
+import {
+  useFilterStore,
+  type GenderPreference,
+  type PropertySort,
+  type PropertyType,
+} from "../store/filterStore";
 
 const TYPES: { label: string; value: PropertyType }[] = [
   { label: "All rooms", value: null },
@@ -33,6 +38,24 @@ const PRICE_PRESETS = [
   { label: "Above ₹20k/mo", min: 20000, max: null },
 ];
 
+const FOOD_OPTIONS: { label: string; value: boolean | null }[] = [
+  { label: "Any", value: null },
+  { label: "Included", value: true },
+  { label: "Not included", value: false },
+];
+
+const PREFERENCE_OPTIONS: { label: string; value: GenderPreference }[] = [
+  { label: "Any PG", value: null },
+  { label: "Women", value: "female" },
+  { label: "Men", value: "male" },
+];
+
+const SORT_OPTIONS: { label: string; value: PropertySort }[] = [
+  { label: "Newest", value: "newest" },
+  { label: "Rent: low to high", value: "rent_low_to_high" },
+  { label: "Rent: high to low", value: "rent_high_to_low" },
+];
+
 const chip = (active: boolean) =>
   `px-4 py-2 rounded-full border ${
     active ? "bg-blue-600 border-blue-600" : "bg-white border-gray-200"
@@ -53,53 +76,141 @@ export default function FilterModal({
     bedrooms,
     minPrice,
     maxPrice,
+    foodIncluded,
+    genderPreference,
+    sortBy,
     setType,
     setBedrooms,
     setMinPrice,
     setMaxPrice,
-    resetFilters,
+    setFoodIncluded,
+    setGenderPreference,
+    setSortBy,
+    resetFacets,
   } = useFilterStore();
 
-  const [localMin, setLocalMin] = useState(
-    minPrice !== null ? String(minPrice) : ""
-  );
-  const [localMax, setLocalMax] = useState(
-    maxPrice !== null ? String(maxPrice) : ""
-  );
-  const [syncedValues, setSyncedValues] = useState({
-    visible,
-    minPrice,
-    maxPrice,
-  });
+  const [priceDraft, setPriceDraft] = useState<{
+    baseMin: number | null;
+    baseMax: number | null;
+    localMin: string;
+    localMax: string;
+  } | null>(null);
+  const [facetDraft, setFacetDraft] = useState<{
+    baseKey: string;
+    type: PropertyType;
+    bedrooms: number | null;
+    foodIncluded: boolean | null;
+    genderPreference: GenderPreference;
+    sortBy: PropertySort;
+  } | null>(null);
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const appliedFacetKey = JSON.stringify([
+    type,
+    bedrooms,
+    foodIncluded,
+    genderPreference,
+    sortBy,
+  ]);
+  const currentFacetDraft =
+    facetDraft?.baseKey === appliedFacetKey
+      ? facetDraft
+      : {
+          baseKey: appliedFacetKey,
+          type,
+          bedrooms,
+          foodIncluded,
+          genderPreference,
+          sortBy,
+        };
+  const currentDraft =
+    priceDraft?.baseMin === minPrice && priceDraft?.baseMax === maxPrice
+      ? priceDraft
+      : null;
 
-  if (
-    syncedValues.visible !== visible ||
-    (visible &&
-      (syncedValues.minPrice !== minPrice ||
-        syncedValues.maxPrice !== maxPrice))
-  ) {
-    setSyncedValues({ visible, minPrice, maxPrice });
-    if (visible) {
-      setLocalMin(minPrice !== null ? String(minPrice) : "");
-      setLocalMax(maxPrice !== null ? String(maxPrice) : "");
-    }
-  }
+  const updateFacetDraft = (
+    values: Partial<
+      Pick<
+        typeof currentFacetDraft,
+        "type" | "bedrooms" | "foodIncluded" | "genderPreference" | "sortBy"
+      >
+    >
+  ) => {
+    setFacetDraft({ ...currentFacetDraft, ...values });
+  };
+  const localMin =
+    currentDraft?.localMin ?? (minPrice !== null ? String(minPrice) : "");
+  const localMax =
+    currentDraft?.localMax ?? (maxPrice !== null ? String(maxPrice) : "");
 
-  const activeCount = [type, bedrooms, minPrice, maxPrice].filter(
-    (v) => v !== null
-  ).length;
+  const setLocalMin = (value: string) => {
+    setPriceDraft({
+      baseMin: minPrice,
+      baseMax: maxPrice,
+      localMin: value,
+      localMax,
+    });
+    setPriceError(null);
+  };
+  const setLocalMax = (value: string) => {
+    setPriceDraft({
+      baseMin: minPrice,
+      baseMax: maxPrice,
+      localMin,
+      localMax: value,
+    });
+    setPriceError(null);
+  };
 
-  const handleApply = () => {
-    setMinPrice(localMin ? Number(localMin) : null);
-    setMaxPrice(localMax ? Number(localMax) : null);
+  const activeCount = [
+    type !== null,
+    bedrooms !== null,
+    minPrice !== null,
+    maxPrice !== null,
+    foodIncluded !== null,
+    genderPreference !== null,
+    sortBy !== "newest",
+  ].filter(Boolean).length;
+
+  const handleClose = () => {
+    setPriceDraft(null);
+    setFacetDraft(null);
+    setPriceError(null);
     onClose();
   };
 
+  const handleApply = () => {
+    const min = localMin.trim() ? Number(localMin) : null;
+    const max = localMax.trim() ? Number(localMax) : null;
+
+    if (
+      (min !== null && (!Number.isFinite(min) || min < 0)) ||
+      (max !== null && (!Number.isFinite(max) || max < 0))
+    ) {
+      setPriceError("Enter rent amounts of ₹0 or more.");
+      return;
+    }
+    if (min !== null && max !== null && min > max) {
+      setPriceError("Minimum rent must not be higher than maximum rent.");
+      return;
+    }
+
+    setPriceError(null);
+    setType(currentFacetDraft.type);
+    setBedrooms(currentFacetDraft.bedrooms);
+    setMinPrice(min);
+    setMaxPrice(max);
+    setFoodIncluded(currentFacetDraft.foodIncluded);
+    setGenderPreference(currentFacetDraft.genderPreference);
+    setSortBy(currentFacetDraft.sortBy);
+    handleClose();
+  };
+
   const handleReset = () => {
-    setLocalMin("");
-    setLocalMax("");
-    resetFilters();
-    onClose();
+    setPriceDraft(null);
+    setPriceError(null);
+    setFacetDraft(null);
+    resetFacets();
+    handleClose();
   };
 
   const shadow = {
@@ -115,12 +226,12 @@ export default function FilterModal({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View className="flex-1 bg-gray-50">
         {/* Header */}
         <View className="flex-row items-center justify-between px-5 pt-6 pb-4 bg-white border-b border-gray-100">
-          <TouchableOpacity onPress={onClose} className="p-1">
+          <TouchableOpacity onPress={handleClose} className="p-1">
             <Ionicons name="close" size={22} color="#374151" />
           </TouchableOpacity>
           <Text className="text-lg font-bold text-gray-900">Filters</Text>
@@ -143,11 +254,11 @@ export default function FilterModal({
               <TouchableOpacity
                 key={String(item.value)}
                 accessibilityRole="button"
-                onPress={() => setType(item.value)}
-                className={chip(type === item.value)}
+                onPress={() => updateFacetDraft({ type: item.value })}
+                className={chip(currentFacetDraft.type === item.value)}
                 style={shadow}
               >
-                <Text className={chipText(type === item.value)}>
+                <Text className={chipText(currentFacetDraft.type === item.value)}>
                   {item.label}
                 </Text>
               </TouchableOpacity>
@@ -156,16 +267,16 @@ export default function FilterModal({
 
           {/* Bedrooms */}
           <Text className="text-base font-bold text-gray-800 mb-3">
-            Bedrooms
+            Bedrooms at the property
           </Text>
           <View className="flex-row gap-2 mb-6">
             {BEDS.map((item) => (
               <TouchableOpacity
                 key={String(item.value)}
                 accessibilityRole="button"
-                onPress={() => setBedrooms(item.value)}
+                onPress={() => updateFacetDraft({ bedrooms: item.value })}
                 className={`flex-1 items-center py-3 rounded-2xl border ${
-                  bedrooms === item.value
+                  currentFacetDraft.bedrooms === item.value
                     ? "bg-blue-600 border-blue-600"
                     : "bg-white border-gray-200"
                 }`}
@@ -173,9 +284,47 @@ export default function FilterModal({
               >
                 <Text
                   className={`text-sm font-bold ${
-                    bedrooms === item.value ? "text-white" : "text-gray-600"
+                    currentFacetDraft.bedrooms === item.value ? "text-white" : "text-gray-600"
                   }`}
                 >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text className="text-base font-bold text-gray-800 mb-3">
+            Food arrangement
+          </Text>
+          <View className="flex-row flex-wrap gap-2 mb-6">
+            {FOOD_OPTIONS.map((item) => (
+              <TouchableOpacity
+                key={String(item.value)}
+                accessibilityRole="button"
+                onPress={() => updateFacetDraft({ foodIncluded: item.value })}
+                className={chip(currentFacetDraft.foodIncluded === item.value)}
+                style={shadow}
+              >
+                <Text className={chipText(currentFacetDraft.foodIncluded === item.value)}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text className="text-base font-bold text-gray-800 mb-3">
+            PG preference
+          </Text>
+          <View className="flex-row flex-wrap gap-2 mb-6">
+            {PREFERENCE_OPTIONS.map((item) => (
+              <TouchableOpacity
+                key={String(item.value)}
+                accessibilityRole="button"
+                onPress={() => updateFacetDraft({ genderPreference: item.value })}
+                className={chip(currentFacetDraft.genderPreference === item.value)}
+                style={shadow}
+              >
+                <Text className={chipText(currentFacetDraft.genderPreference === item.value)}>
                   {item.label}
                 </Text>
               </TouchableOpacity>
@@ -222,19 +371,25 @@ export default function FilterModal({
               </View>
             ))}
           </View>
+          {priceError && (
+            <Text accessibilityRole="alert" className="mb-3 text-sm text-red-600">
+              {priceError}
+            </Text>
+          )}
 
           {/* Price Presets */}
           <View className="flex-row flex-wrap gap-2">
             {PRICE_PRESETS.map((p) => {
-              const active = minPrice === p.min && maxPrice === p.max;
+              const draftMin = localMin.trim() ? Number(localMin) : null;
+              const draftMax = localMax.trim() ? Number(localMax) : null;
+              const active = draftMin === p.min && draftMax === p.max;
               return (
                 <TouchableOpacity
                   key={p.label}
                   onPress={() => {
                     setLocalMin(p.min ? String(p.min) : "");
                     setLocalMax(p.max ? String(p.max) : "");
-                    setMinPrice(p.min);
-                    setMaxPrice(p.max);
+                    setPriceError(null);
                   }}
                   className={`px-3 py-1.5 rounded-full border ${
                     active
@@ -252,6 +407,25 @@ export default function FilterModal({
                 </TouchableOpacity>
               );
             })}
+          </View>
+
+          <Text className="mt-6 text-base font-bold text-gray-800 mb-3">
+            Sort results
+          </Text>
+          <View className="flex-row flex-wrap gap-2">
+            {SORT_OPTIONS.map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                accessibilityRole="button"
+                onPress={() => updateFacetDraft({ sortBy: item.value })}
+                className={chip(currentFacetDraft.sortBy === item.value)}
+                style={shadow}
+              >
+                <Text className={chipText(currentFacetDraft.sortBy === item.value)}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </ScrollView>
 

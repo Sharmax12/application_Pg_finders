@@ -16,6 +16,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+type HomeQueryResult = {
+  data: Property[] | null;
+  error: unknown;
+};
+
+async function firstHomePage(query: unknown): Promise<HomeQueryResult> {
+  const pageable = query as { range?: (from: number, to: number) => unknown };
+  const request =
+    typeof pageable.range === "function" ? pageable.range(0, 7) : query;
+  return (await request) as HomeQueryResult;
+}
+
 export default function HomeScreen() {
   const { user } = useUser();
   const router = useRouter();
@@ -35,21 +47,23 @@ export default function HomeScreen() {
         setError(null);
 
         try {
-          const [featuredResult, recommendedResult] = await Promise.all([
-            supabase
+          const featuredQuery = supabase
               .from("properties")
               .select(PROPERTY_COLUMNS)
               .eq("is_featured", true)
               .eq("is_sold", false)
               .not("monthly_rent", "is", null)
-              .order("created_at", { ascending: false }),
-            supabase
+              .order("created_at", { ascending: false });
+          const recommendedQuery = supabase
               .from("properties")
               .select(PROPERTY_COLUMNS)
               .eq("is_featured", false)
               .eq("is_sold", false)
               .not("monthly_rent", "is", null)
-              .order("created_at", { ascending: false }),
+              .order("created_at", { ascending: false });
+          const [featuredResult, recommendedResult] = await Promise.all([
+            firstHomePage(featuredQuery),
+            firstHomePage(recommendedQuery),
           ]);
 
           if (featuredResult.error) {
@@ -103,18 +117,27 @@ export default function HomeScreen() {
                 resizeMode="contain"
                 accessibilityLabel="PGFinders"
               />
-              <View className="items-end">
-                <Text className="text-gray-500 text-xs">Find your next PG 👋</Text>
-                <Text className="text-gray-900 text-base font-bold">
-                  {user?.firstName ?? "User"}
-                </Text>
-              </View>
+              {user ? (
+                <View className="items-end">
+                  <Text className="text-gray-500 text-xs">Find your next PG 👋</Text>
+                  <Text className="text-gray-900 text-base font-bold">
+                    {user.firstName ?? "Welcome"}
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={() => router.push("/sign-in")}
+                  className="rounded-xl bg-blue-50 px-4 py-2"
+                >
+                  <Text className="font-semibold text-blue-700">Sign in</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Search Bar */}
-            <TouchableOpacity
-              onPress={() => router.push("/(root)/(tabs)/search")}
-              className="mx-5 mb-6 flex-row items-center bg-white rounded-2xl px-4 py-3 gap-3"
+            <View
+              className="mx-5 mb-6 flex-row items-center gap-3 rounded-2xl bg-white px-3 py-2"
               style={{
                 shadowColor: "#000",
                 shadowOffset: { width: 0, height: 1 },
@@ -123,11 +146,20 @@ export default function HomeScreen() {
                 elevation: 2,
               }}
             >
-              <Ionicons name="search-outline" size={18} color="#9CA3AF" />
-              <Text className="text-gray-400 text-sm flex-1">
-                Search PGs, neighbourhoods...
-              </Text>
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Search PGs and neighbourhoods"
+                onPress={() => router.push("/(root)/(tabs)/search")}
+                className="flex-1 flex-row items-center gap-3 px-1 py-2"
+              >
+                <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+                <Text className="flex-1 text-sm text-gray-400">
+                  Search PGs, neighbourhoods...
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Search PGs with filters"
                 onPress={() =>
                   router.push("/(root)/(tabs)/search?openFilters=true")
                 }
@@ -135,7 +167,7 @@ export default function HomeScreen() {
               >
                 <Ionicons name="options-outline" size={15} color="white" />
               </TouchableOpacity>
-            </TouchableOpacity>
+            </View>
 
             {/* Featured Section */}
             <View className="mb-6">
@@ -169,6 +201,11 @@ export default function HomeScreen() {
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={{ paddingHorizontal: 20 }}
+                  ListEmptyComponent={
+                    <Text className="px-5 py-6 text-sm text-gray-400">
+                      New featured PGs will appear here.
+                    </Text>
+                  }
                 />
               )}
             </View>
